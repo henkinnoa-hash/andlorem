@@ -7,7 +7,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="&amp;Lorem">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#242424" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" href="icon.png">
@@ -39,7 +41,7 @@ body.onphone #phone{touch-action:pan-y}
 body.onphone #phone .n[data-nm="Status bar"]{visibility:hidden}
 .scr{position:absolute;left:0;top:0;width:402px;height:874px;overflow:hidden}
 .n{position:absolute;box-sizing:border-box}
-.t{white-space:pre-wrap;overflow-wrap:normal}
+.t{white-space:pre-wrap;overflow-wrap:break-word}
 .t.nw{white-space:pre}
 .g{display:block;pointer-events:none;position:absolute}
 .hot{cursor:pointer}
@@ -202,9 +204,9 @@ function childEl(c){
   if(c.y==='IN')el._inst={orig:c,cur:c.mc};
   return el;
 }
-function textColor(col,size){ return APP.mapText?APP.mapText(col,size):col; }
+function textColor(col,size,o){ return APP.mapText?APP.mapText(col,size,o):col; }
 function buildText(el,o){
-  el.classList.add('t');if(o.ar==='WIDTH_AND_HEIGHT')el.classList.add('nw');
+  el.classList.add('t');if(o.ar==='WIDTH_AND_HEIGHT'||!/\s/.test((o.ch||'').trim()))el.classList.add('nw');
   const inner=document.createElement('div');
   const ah={L:'left',C:'center',R:'right',J:'justify'}[o.ah]||'left';
   el.style.display=o.v===0?'none':'flex';el.style.flexDirection='column';
@@ -217,7 +219,7 @@ function buildText(el,o){
     const [a,b,fam,sty,size,col,op,lh,ls,dec,cas]=s;const sp=document.createElement('span');
     let txt=ch.slice(a,b);if(APP.subst)txt=APP.subst(txt,BUILD_FID);
     sp.textContent=txt;
-    let st=`font-family:${family(fam)};font-weight:${weight(sty)};font-size:${size}px;color:${rgba(textColor(col,size),op)};`;
+    let st=`font-family:${family(fam)};font-weight:${weight(sty)};font-size:${size}px;color:${rgba(textColor(col,size,o),op)};`;
     if(/italic/i.test(sty))st+='font-style:italic;';
     if(lh===0)st+='line-height:normal;';else if(typeof lh==='string'){const v=+lh.slice(1);st+=`line-height:${size*v/100}px;`;}else st+=`line-height:${lh}px;`;
     if(ls){if(typeof ls==='string')st+=`letter-spacing:${(+ls.slice(1))/100}em;`;else st+=`letter-spacing:${ls}px;`;}
@@ -252,10 +254,10 @@ function matchTrees(oldRoot,newRoot){
     for(const c of kids(op))(og[c._n.n]=og[c._n.n]||[]).push(c);
     for(const c of kids(np))(ng[c._n.n]=ng[c._n.n]||[]).push(c);
     for(const nm in ng){ const ol=og[nm];if(!ol)continue;const nl=ng[nm];
-      if(ol.length===1&&nl.length===1){pairs.set(nl[0],ol[0]);local.push([nl[0],ol[0]]);continue;}
+      if(ol.length===1&&nl.length===1){ if((ol[0]._n.y==='TE')!==(nl[0]._n.y==='TE'))continue; pairs.set(nl[0],ol[0]);local.push([nl[0],ol[0]]);continue;}
       const cand=[];for(const a of nl)for(const b of ol)cand.push([pairCost(b,a),a,b]);
       cand.sort((x,y)=>x[0]-y[0]);const ua=new Set(),ub=new Set();
-      for(const [,a,b] of cand){if(ua.has(a)||ub.has(b))continue;ua.add(a);ub.add(b);pairs.set(a,b);local.push([a,b]);}
+      for(const [,a,b] of cand){if(ua.has(a)||ub.has(b)||((a._n.y==='TE')!==(b._n.y==='TE')))continue;ua.add(a);ub.add(b);pairs.set(a,b);local.push([a,b]);}
     }
     for(const [ne,oe] of local) if(!isLeaf(ne)&&!isLeaf(oe))m(oe,ne);
   })(oldRoot,newRoot);
@@ -297,6 +299,8 @@ function smartAnimate(oldRoot,newRoot,tr,done,inner){
   const matchedOld=new Set(pairs.values());const anims=[];
   const opts={duration:dur,easing:ease,fill:'backwards'};
   const fade={duration:dur,easing:'linear',fill:'both'};
+  const fadeIn=(e,o=e.style.opacity||1)=>e.animate([{opacity:0},{opacity:0,offset:.12},{opacity:o,offset:.55},{opacity:o}],{duration:dur,easing:'linear',fill:'backwards'});
+  const fadeOut=(e,o=e.style.opacity||1)=>e.animate([{opacity:o},{opacity:0,offset:.35},{opacity:0}],{duration:dur,easing:'linear',fill:'both'});
   const rootPair=(np,op)=>(np===newRoot&&op===oldRoot)||pairs.get(np)===op;
   if(oldRoot!==newRoot&&!inner){const a=oldRoot._box,b=newRoot._box;
     if(a.w!==b.w||a.h!==b.h||a.x!==b.x||a.y!==b.y)
@@ -311,7 +315,7 @@ function smartAnimate(oldRoot,newRoot,tr,done,inner){
     const oe=pairs.get(ne);const n=ne._n;
     if(!oe){ if(underNew(ne))continue;
       if(plan&&plan.has(ne))anims.push(popIn(ne,plan.get(ne),dur));
-      else anims.push(ne.animate([{opacity:0},{opacity:ne.style.opacity||1}],fade));
+      else anims.push(fadeIn(ne));
       continue; }
     const o=oe._n;
     let from={x:oe._box.x,y:oe._box.y};
@@ -337,9 +341,9 @@ function smartAnimate(oldRoot,newRoot,tr,done,inner){
       oe.style.visibility='visible';
       const ok0={...kf0},ok1={...kf1,opacity:0};
       if(!rootPair(np,op)){ok0.left=oe._box.x+'px';ok0.top=oe._box.y+'px';ok1.left=oe._box.x+'px';ok1.top=oe._box.y+'px';}
-      anims.push(oe.animate([ok0,ok1],{duration:dur,easing:ease,fill:'both'}));
-      kf0.opacity=0;
-      anims.push(ne.animate([kf0,kf1],{duration:dur,easing:ease,fill:'backwards'}));
+      const oo=ok0.opacity,no=kf1.opacity;delete ok0.opacity;delete ok1.opacity;delete kf0.opacity;delete kf1.opacity;
+      anims.push(oe.animate([ok0,ok1],{duration:dur,easing:ease,fill:'both'}),fadeOut(oe,oo));
+      anims.push(ne.animate([kf0,kf1],{duration:dur,easing:ease,fill:'backwards'}),fadeIn(ne,no));
     } else {
       oe.style.visibility='hidden';
       anims.push(ne.animate([kf0,kf1],opts));
@@ -347,7 +351,7 @@ function smartAnimate(oldRoot,newRoot,tr,done,inner){
     }
   }
   for(const oe of allNodes(oldRoot)){ if(matchedOld.has(oe))continue;
-    oe.style.visibility='visible';if(!underOld(oe))anims.push(oe.animate([{opacity:oe.style.opacity||1},{opacity:0}],fade)); }
+    oe.style.visibility='visible';if(!underOld(oe))anims.push(fadeOut(oe)); }
   let fin=false;const end=()=>{if(fin)return;fin=true;done&&done();};
   setTimeout(end,dur+20);
 }
@@ -367,6 +371,7 @@ function scheduleTimeouts(root,tok){
     const t=setTimeout(()=>{ if(tok!==token||!el.isConnected)return; run(el,r.a); },(r.d||0)*1000);timers.push(t);} }
 }
 function show(id,tr,isBack){
+  if(APP.redirect)id=APP.redirect(id,tr)||id;
   if(APP.track)APP.track(id,isBack);
   if(APP.route)id=APP.route(id)||id;
   if(!N[id])return;
@@ -518,7 +523,7 @@ addEventListener('resize',fit);fit();
 /* ======================================================================
    Part 2 — the live app layer.
    ====================================================================== */
-const ST={year:'',first:'',last:'',email:'',insta:'',folio:'',about:'',budget:'',due:null,padOpen:false,focus:null,college:'',dept:'',accent:null,avatar:null,active:'first',shift:false,grids:{}};
+const ST={credits:3,led:2,joined:5,chat:null,editFrom:null,q:'',skills:null,prefs:null,year:'',first:'',last:'',email:'',insta:'',folio:'',about:'',budget:'',due:null,padOpen:false,focus:null,college:'',dept:'',accent:null,avatar:null,active:'first',shift:false,grids:{}};
 const NAME_SET='678:22429',EMAIL_SET='678:24302',COLLEGE_SET='678:23548';
 const DEF_AVATAR='1ucs5gg2xl';
 const OWN_AV=new Set(['a0o6sp30d','1jmm4mj309','2fgqb730d','1rh33u1305']);
@@ -608,7 +613,7 @@ function prep(){
   for(const c of N[HOME].k)if(c.n==='home-btn')c.r=[];
   // "What do you bring" (project): the title shrinks and the skills pop in (was a push)
   N['790:38916'].r[0].a[0].tr={t:'SMART_ANIMATE',du:.9,e:'GENTLE',pop:true};
-  {const l=N['790:38964'].k.find(c=>c.n==='next label');if(l)tx(l,'My skills');}
+  {const a=N['790:38916'],b=N['790:38964'];for(const nm of ['Group 10','next label']){const s=a.k.find(c=>c.n===nm),i=b.k.findIndex(c=>c.n===nm);if(s&&i>=0)b.k[i]=clone(s);}}
   prepYear();
   // home button: corners 4, and 20 while it is big in the middle of the "going home" burst
   (function w(o){for(const c of o.k||[]){ if(c.n==='home-btn')c.cr=c.cr||4; w(c);} })({k:Object.values(N)});
@@ -863,7 +868,7 @@ function squareButtons(){
   const fix=(vid,btnN,prevN)=>{const v=COMP[vid];if(!v)return;const b=v.k.find(c=>c.n===btnN),p=v.k.find(c=>c.n===prevN);if(!b||!p)return;
     if(Math.abs(b.w-b.h)<1||b.h!==50)return;const d=b.w-50;b.w=50;b.x+=d;if(p.x+p.w<=b.x)p.w+=d;
     for(const c of v.k)if(/^icon-/.test(c.n)&&c.x>=b.x-d-1)c.x+=d/2;};
-  for(const [set,prev] of [[NAME_SET,'pill-last'],[EMAIL_SET,'pill-email'],['868:3416','pill'],['868:3948','pill']])
+  for(const [set,prev] of [[NAME_SET,'pill-last'],[EMAIL_SET,'pill-email'],['868:3416','pill'],['868:3948','pill'],['739:35606','pill-search']])
     for(const k of Object.keys(COMP))if(SETOF[k]===set&&COMP[k].vp&&['Empty','Edit','Typed'].includes(COMP[k].vp.State))fix(k,'pill-btn',prev);
   // budget − / +: 50 × 50
   const f=N['861:15423'];const ar=f.k.filter(c=>c.n==='area').sort((a,b)=>a.x-b.x);
@@ -914,6 +919,16 @@ function liveField(){ if(!cur)return null;const live=[];
   for(const e of cur.querySelectorAll('.n'))if(e._inst&&e.isConnected&&e.style.pointerEvents!=='none'){const s=SETOF[e._inst.cur],st=stateOf(e);
     if((s===NAME_SET&&(st==='Empty'||st==='Edit'))||((TF[s]||s===AREA_SET)&&(st==='Empty'||st==='Typed')))live.push(e);}
   return live.find(e=>SETOF[e._inst.cur]===ST.focus)||live[live.length-1]||null; }
+function layoutTF(f,st,C,val){
+  // the grey field hugs what is written in it (or the hint), and the square ✓ follows 12px after it
+  const pill=child(f,C.pill),btn=child(f,'pill-btn'),v=child(f,C.val),chk=child(f,'icon-check'),pen=child(f,'icon-pen');
+  if(!pill||!btn||!v)return;const typing=st==='Typed'||st==='Empty';
+  const shown=[child(f,'hint'),child(f,'placeholder')].find(e=>e&&e.style.opacity!=='0'&&getComputedStyle(e).opacity!=='0');
+  const tw=val?v._box.w:(shown?Math.ceil(textW(shown.textContent,16,700))+1:v._box.w);
+  const set=(e,x,w)=>{if(!e)return;if(x!=null){e._box.x=x;e.style.left=x+'px';}if(w!=null){e._box.w=w;e.style.width=w+'px';}};
+  if(typing){const w=Math.min(286,Math.max(110,v._box.x+tw+(val?6:0)+16));set(pill,null,w);set(btn,w+12,50);set(chk,w+12+17);set(pen,w+12+16);}
+  else{const w=v._box.x+tw+12+18+16;set(pill,null,w);set(btn,w-btn._box.w);set(pen,v._box.x+tw+12);set(chk,v._box.x+tw+12);}
+}
 function setText(el,t,max=1e9,fixed=false){
   // replace a hug-width text and push the pills / icons after it, like auto layout.
   // max: the text box stops growing there and scrolls to show the end, like a real input.
@@ -942,13 +957,15 @@ function bindField(f){
   } else if(set===AREA_SET){ bindArea(f,st);
   } else if(TF[set]){
     const C=TF[set],val=ST[C.key],v=child(f,C.val);
+    const typing=st==='Typed'||st==='Empty';
     if(val){ const pill=child(f,C.pill);
-      // while typing the field keeps its Figma width (268 + ✓); the text scrolls once it is full
-      if(st==='Typed'||st==='Empty')setText(v,val,pill._box.w-v._box.x-20,true);
-      else setText(v,val,348-62-v._box.x-16); }
-    if(st==='Typed'||st==='Empty'){
+      if(C.fixed||!typing)setText(v,val,C.fixed?pill._box.w-v._box.x-20:348-62-v._box.x-16,!!C.fixed);
+      else setText(v,val,286-v._box.x-20,true); }
+    if(!C.fixed)layoutTF(f,st,C,val);
+    if(typing){
       if(caret){caret._box.x=val?v._box.x+v._box.w+2:v._box.x;caret.style.left=caret._box.x+'px';caret.style.opacity=1;caret.classList.add('blink');}
     }
+    if(set===SEARCH_SET)renderSearch(f,st);
   }
   if(['Empty','Edit','Typed'].includes(st))addKeys(f);
   dockKeyboard(f,st);
@@ -984,6 +1001,9 @@ function closeOthers(keep){
     const s=SETOF[e._inst.cur],st=stateOf(e);if(!TF[s]&&s!==AREA_SET)continue;if(!['Empty','Typed'].includes(st))continue;
     const v=s===AREA_SET?ST.about:ST[TF[s].key];changeTo(e,varId(s,v?'Done':'Start'),DONE); }
 }
+let LASTPT=null;phone.addEventListener('pointerup',e=>{LASTPT=[e.clientX,e.clientY];},true);
+const inRect=(e,pt)=>{if(!e||!pt)return false;const r=e.getBoundingClientRect();return pt[0]>=r.left&&pt[0]<=r.right&&pt[1]>=r.top&&pt[1]<=r.bottom;};
+const hitChild=(f,nm,pt=LASTPT)=>inRect(child(f,nm),pt);
 const TAP={t:'SMART_ANIMATE',du:.25,e:'EASE_OUT'},DONE={t:'SMART_ANIMATE',du:.6,e:'GENTLE'};
 function typeKey(k){
   const f=liveField();if(!f)return false;
@@ -1042,7 +1062,7 @@ APP.click=el=>{
   }
   if(set===AREA_SET&&(st==='Empty'||st==='Typed')){
     ST.focus=set;
-    if(nm==='btn'||nm==='icon-check'){ if(ST.about.trim().length>2)changeTo(f,varId(AREA_SET,'Done'),DONE); }
+    if(nm==='btn'||nm==='icon-check'||hitChild(f,'btn')){ if(ST.about.trim().length>2)changeTo(f,varId(AREA_SET,'Done'),DONE); }
     return true;
   }
   if(TF[set]&&(st==='Empty'||st==='Typed')){
@@ -1250,9 +1270,10 @@ function partition(seed,K){
   const MIN=6;
   for(let guard=0;guard<60&&regs.filter(r=>!isOwn(r)).length<K;guard++){
     const cand=regs.filter(r=>!isOwn(r)&&(W(r)>=2*MIN||H(r)>=2*MIN)).sort((x,y)=>W(y)*H(y)-W(x)*H(x));if(!cand.length)break;
-    const r=cand[Math.min(cand.length-1,Math.floor(R()*1.6))];
+    const r=cand[Math.floor(Math.pow(R(),.7)*cand.length)];
     let v=W(r)>H(r)*1.25?1:H(r)>W(r)*1.25?0:(R()<.5?1:0);if(v&&W(r)<2*MIN)v=0;if(!v&&H(r)<2*MIN)v=1;
-    const lo=(v?r.a:r.c)+MIN,hi=(v?r.b:r.d)-MIN,at=lo+Math.floor(R()*(hi-lo+1));
+    // cuts near an edge more often than in the middle: one big tile beside a slim one
+    const lo=(v?r.a:r.c)+MIN,hi=(v?r.b:r.d)-MIN,u=R(),sk=u<.5?Math.pow(u*2,2.2)/2:1-Math.pow((1-u)*2,2.2)/2,at=lo+Math.round(sk*(hi-lo));
     regs.splice(regs.indexOf(r),1,...cut(r,v,at));}
   return regs.filter(r=>!isOwn(r)).map(r=>{
     const t={x:13*r.a,Y:13*r.c,w:13*W(r)-13,h:13*H(r)-13,cr:[4,4,4,4]};
@@ -1266,7 +1287,7 @@ function scanFrames(){
   const norm=t=>({x:(t.x+t.w/2-13)/377,y:(t.Y+t.h/2-208)/653});   // results-tile centre, mapped into the scan area
   const names=[...RES.map(r=>r.n),'scan-8','scan-9','scan-10'];
   for(let k=0;k<4;k++){
-    const last=k===3,tiles=partition(seed0+k*131,last?RES.length:11);
+    const last=k===3,tiles=partition(seed0+k*131,last?RES.length:[9,6,11][k]);
     // give each tile a stable name: the results tile nearest to it (so the last shuffle lands on "Mission crew")
     const free=[...(last?RES.map(r=>r.n):names)],cen=t=>({x:(t.x+t.w/2-13)/377,y:(t.Y+t.h/2-351)/510});
     const pairs=[];for(const t of tiles)for(const nm of free){const r=RES.find(q=>q.n===nm);const a=cen(t),b=r?norm(r):{x:.5,y:.5};pairs.push([Math.hypot(a.x-b.x,a.y-b.y),t,nm]);}
@@ -1385,7 +1406,9 @@ NK.addEventListener('blur',()=>{ const s=NK._set;NK._set=null;
 // iOS only opens the keyboard inside a real touch: re-focus at the end of the tap that opened a field
 phone.addEventListener('touchend',e=>{ if(!NATIVE||!cur)return;
   if(e.cancelable)e.preventDefault(); // no emulated mouse-down afterwards: it would take the focus (and the keyboard) away
-  const f=liveField();if(f){if(document.activeElement!==NK||NK._set!==SETOF[f._inst.cur]){NK._set=null;nativeFocus(SETOF[f._inst.cur]);}return;}
+  const f=liveField();if(f){const t=e.changedTouches&&e.changedTouches[0],pt=t&&[t.clientX,t.clientY];
+    const onInput=[...f.children].some(c=>c._n&&/^(area|pill(?!-btn))/.test(c._n.n)&&inRect(c,pt))||(pt&&!inRect(f,pt)?false:!['btn','pill-btn','icon-check'].some(n=>hitChild(f,n,pt)));
+    if(onInput&&(document.activeElement!==NK||NK._set!==SETOF[f._inst.cur])){NK._set=null;nativeFocus(SETOF[f._inst.cur]);}return;}
   const b=N[cur._fid]&&(N[cur._fid].base||cur._fid);
   if(ST.padOpen&&(b===FR_BUDGET||b===FR_BUDGET0)&&document.activeElement!==NK){NK._set=null;nativeFocus('BUDGET');}
 });
@@ -1395,15 +1418,506 @@ APP.onChange=(ne,dest)=>{ _oc(ne,dest); const st=COMP[dest]&&COMP[dest].vp&&COMP
   if(NATIVE&&FIELD_SETS.includes(SETOF[dest])&&!['Empty','Edit','Typed'].includes(st))setTimeout(()=>{if(!liveField())NK.blur();},30); };
 </script>
 <script>
+/* ======================================================================
+   Part 4 — real people: profiles, settings and search.
+   ====================================================================== */
+const OWN_PROFILE=['709:26284','709:26312','709:26340','709:26368','709:26396'];
+const SETTINGS_ID='S:settings',SEARCH_SET='739:35606';
+const hashStr=s=>{let h=7;for(const c of s)h=(h*31+c.charCodeAt(0))>>>0;return h;};
+const pick=(arr,h,i=0)=>arr[(h+i*7)%arr.length];
+
+/* ---------- everyone's data: what they "filled in" during onboarding ---------- */
+const DEPT_SKILLS={
+  'Visual Communication':['Branding','Motion','Lettering','Typography','UX/UI','Photography','Art Direction','Editorial','Social Media','Illustration','Packaging','Video Editing','Layout','Visual Concepts','Copywriting'],
+  'Fashion':['Pattern Making','Draping','Sewing','Tailoring','Knitwear','Styling','Fashion Illustration','Trend Research','Collection Design','CLO 3D','Embroidery','Accessories','Upcycling','Fashion Shoots','Textile Sourcing'],
+  'Animation':['Storyboards','Character Design','2D Animation','3D Animation','Stop Motion','Rigging','Compositing','Motion Graphics','Backgrounds','Lip Sync','Blender','After Effects','Sound Design','Frame by Frame','Directing'],
+  'Textile':['Weaving','Knitting','Print Design','Dyeing','Embroidery','Pattern Repeat','Surface Design','Felting','Screen Printing','Material Research','Jacquard','Natural Dyes','Textile Tech','Colour Theory','Upholstery'],
+  'Architecture':['Concept Design','Model Making','Rhino','Revit','AutoCAD','Rendering','Urban Planning','Sketching','Parametric Design','Interiors','Landscape','Eco Design','Detailing','Site Analysis','Lighting Design'],
+  'Industrial Design':['Product Design','Sketching','SolidWorks','Rhino','3D Printing','Prototyping','Ergonomics','Materials','CMF','Packaging','KeyShot','Woodwork','Ceramics','User Research','Production'],
+  'Photography':['Studio Lighting','Portrait','Still Life','Retouching','Film Photo','Darkroom','Reportage','Fashion Shoots','Art Direction','Lightroom','Video','Product Shots','Analog Print','Photo Editing','Exhibition'],
+  'Coding':['Front End','Back End','UX/UI','JavaScript','Python','Creative Coding','React','Databases','Prototyping','Generative Art','Arduino','Game Dev','Data Viz','Web Design','AI Tools'],
+};
+const SKILL_POOL=['Typography','Art Direction','Illustration','Layout','Branding','Motion','Photography','Copywriting','Video Editing','Social Media','Poster Design','Key Art','Lettering','Print Production','Visual Concepts'];
+const PROJECTS=[
+  ['Ceramic tableware brand','Maya Levi','Industrial Design'],['Stop-motion short: Lost Glove','Noam Peretz','Animation'],
+  ['Student magazine: Lorem','Tamar Golan','Visual Communication'],['Hebrew display typeface','Shira Katz','Visual Communication'],
+  ['Recycled denim collection','Adi Ronen','Textile'],['Night market posters','Doron Sela','Visual Communication'],
+  ['Studio still-life series','Lior Azulay','Photography'],['Tel Aviv bike-share app','Ido Mizrahi','Coding'],
+  ['Zero-waste packaging','Yoav Ben-Ami','Industrial Design'],['Coffee brand identity','Roni Shapira','Visual Communication'],
+  ['Hand-lettered book covers','Hadar Mor','Visual Communication'],['Modular lamp','Karin Eldar','Industrial Design'],
+  ['Motion poster series','Amit Alharizi','Visual Communication'],['Upcycled sofa textiles','Maya Levi','Fashion'],
+];
+function personData(it){
+  const P=it.person;if(P._full)return P;const h=hashStr(P.name);
+  const [first,...rest]=P.name.split(' ');const last=rest.join(' ');
+  const pool=DEPT_SKILLS[P.dept]||SKILL_POOL;const skills=[P.skill];for(let i=0;skills.length<4&&i<60;i++){const s=pick(pool,h,i);if(!skills.includes(s))skills.push(s);}
+  const handle=(first+'.'+last.replace(/[^A-Za-z]/g,'')).toLowerCase();
+  const mine=PROJECTS.filter(p=>p[1]===P.name).map(p=>p[0]);
+  for(let j=3;mine.length<3&&j<40;j++){const p=pick(PROJECTS,h,j)[0];if(!mine.includes(p))mine.push(p);}
+  Object.assign(P,{_full:1,first,last,skills,color:'#'+it.color.slice(1).toLowerCase(),g:it.char&&it.char.g,
+    email:`${handle}@${P.college.toLowerCase()}.ac.il`,link:`behance.net/${handle.replace('.','')}`,insta:'@'+handle.replace('.','_'),
+    projects:mine,done:2+h%5,waiting:1+h%3,earned:60+(h%6)*30});
+  return P;
+}
+function meData(){
+  const first=ST.first||'Noa',last=ST.last||'Henkin',dept=ST.dept||'Visual Communication',college=ST.college||'HIT',year=ST.year||'3rd';
+  const skills=ST.skills&&ST.skills.length?ST.skills:['Art Direction','Visual Concepts','Layout','Typography'];
+  return {me:1,name:first+' '+last,first,last,dept,college,year,skills,skill:skills[0],
+    email:ST.email||'noa.h@my.hit.ac.il',link:ST.folio||'behance.net/noahenkin',insta:ST.insta||'@noa_henkin',
+    projects:['Ceramic tableware brand','Student magazine: Lorem','Night market posters'],done:5,waiting:2,earned:180,credits:3};
+}
+const LINE={Typography:'type is my favourite tool',Branding:'branding is where I shine',Illustration:'I draw characters and worlds',
+  'Art Direction':'I set the mood of a project and keep every piece in it',Layout:'layouts are how I think',Motion:'I make type and images move',
+  'Motion design':'I make type and images move',Photography:'I work with light, studio and still life',Copywriting:'I write the words that sell the idea',
+  'Visual Concepts':'I turn a rough idea into a clear visual world','Product Design':'I design objects people want to hold','3D':'I model and render in 3D',
+  'UX/UI':'I design interfaces people enjoy using',Packaging:'I design boxes, labels and shelf presence',Lettering:'I draw letters by hand',
+  Editorial:'I design magazines and long reads','Video Editing':'I cut video with rhythm','Social Media':'I make content that people stop for',
+  'Poster Design':'posters are my playground','Key Art':'I make the one image that sells a project','Print Production':'I know paper, ink and print',
+  'Art direction':'I set the mood of a project'};
+function profileTexts(D){
+  const sk=D.skills.slice(0,4);
+  return {
+    About:`${(LINE[sk[0]]||'My thing is '+sk[0]).replace(/^./,c=>c.toUpperCase())}, and ${LINE[sk[1]]||'I also do '+sk[1]}. ${D.year}-year ${D.dept} at ${D.college}, ${D.me?'open':'looking'} for projects with a strong concept behind them.`,
+    'Credits list':`${D.done} projects so far: ${D.projects.slice(0,3).join(', ')}.`,
+    Stats:`${D.waiting} ${D.waiting>1?'projects':'project'} waiting for a crew, ${D.done} already done, and ${D.earned} credits earned along the way.`,
+    Info:`${D.dept} · ${D.college} · ${D.year} year\n${D.email}\n${D.link}\n${D.insta}`,
+    Skills:`${sk.join(' · ')}\n${sk.map(s=>LINE[s]).filter(Boolean).slice(0,2).join(', ').replace(/^./,c=>c.toUpperCase())}.`,
+  };
+}
+function setBody(n,title,body){
+  const sg=n.sg||[];if(sg.length<2){tx(n,title+'\n'+body);return;}
+  const s0=sg[0],s1=sg[1],sl=sg[sg.length-1],t=title.length,ch=title+'\n'+body;
+  n.ch=ch;n.sg=[[0,t,...s0.slice(2)],[t,t+1,...s1.slice(2)],[t+1,ch.length,...sl.slice(2)]];
+}
+function personalize(f,D,ids){
+  const T=profileTexts(D);const pc=D.color;
+  for(const c of f.k){
+    if(c.y==='TE'){
+      const head=(c.ch||'').split('\n')[0].trim();
+      if(/^My Profile/.test(c.ch||'')){ if(!D.me){const a='Profile\n',b=D.name;c.ch=a+b;c.sg=[[0,a.length,...c.sg[0].slice(2)],[a.length,c.ch.length,...c.sg[1].slice(2)]];c.sg[1][5]=ink(pc);} }
+      else if(T[head]&&(c.ch||'').split('\n').slice(1).join('').trim())setBody(c,head,T[head]); // only the open tile shows its text
+      else if(head==='Settings'&&!D.me){tx(c,'Message '+D.first);}
+    }
+    if(!D.me){
+      // the profile wears the person's colour
+      if(c.f&&c.f[0]&&c.f[0].c){const h=c.f[0].c.toLowerCase();if(h==='#dee6ff'){c.f=[{t:'S',c:tintOf(pc),o:1}];c.fixc=1;}else if(h==='#3361ff'){c.f=[{t:'S',c:pc,o:1}];c.fixc=1;}}
+      if(c.sg)for(const s of c.sg){const h=(s[5]||'').toLowerCase();if(h==='#3361ff')s[5]=ink(pc);else if(h==='#ffffff'&&lum(pc)>.5)s[5]=mix(pc,'#000000',.62);}
+    }
+    for(const r of c.r||[])for(const a of r.a){
+      if(a.n==='NAVIGATE'&&ids[a.d])a.d=ids[a.d];
+      if(!D.me&&a.d==='709:29331'){a.d='732:32348';}          // "Message …"
+      if(D.me&&a.d==='709:29331'){a.d=SETTINGS_ID;a.tr={...GENTLE};}
+    }
+  }
+  if(!D.me&&D.g){ // their avatar lives in the Info tile
+    const box=f.k.find(c=>c.n==='Rectangle 38');
+    if(box){const [w0,h0]=svgSize(D.g);const s=Math.min(box.h*.55/h0,box.w*.5/w0);const w=w0*s,h=h0*s;
+      f.k.splice(f.k.indexOf(box)+1,0,{n:'p-avatar',y:'GR',g:D.g,fit:1,x:box.x+box.w-w-12,Y:box.Y+box.h-h-10,w,h});}
+  }
+}
+function profileFamily(D){
+  const ids={};for(const id of OWN_PROFILE)ids[id]='P'+(++VSEQ)+':'+id;
+  for(const id of OWN_PROFILE){const f=clone(N[id]);personalize(f,D,ids);f.i=ids[id];f.base=id;N[ids[id]]=f;}
+  // the Portfolio tile opens the Info view (where the links are)
+  for(const id of OWN_PROFILE){const f=N[ids[id]];const p=f.k.find(c=>c.n==='Rectangle 30');if(p&&!(p.r&&p.r.length))p.r=[{t:'ON_CLICK',a:[{n:'NAVIGATE',d:ids['709:26368'],tr:{t:'SMART_ANIMATE',du:.77,e:'GENTLE'}}]}];}
+  return ids;
+}
+// your own profile shows what you filled in
+for(const id of OWN_PROFILE)ROUTE[id]=()=>{const f=clone(N[id]);const ids={};personalize(f,meData(),ids);
+  const p=f.k.find(c=>c.n==='Rectangle 30');if(p&&!(p.r&&p.r.length))p.r=[{t:'ON_CLICK',a:[{n:'NAVIGATE',d:'709:26368',tr:{t:'SMART_ANIMATE',du:.77,e:'GENTLE'}}]}];
+  return addFrame(id,f);};
+// other people: the same living profile, in their colour, with their answers
+const _pf=profileFrame;
+profileFrame=function(it,backId){
+  const P=it.person;if(FIGMA_PROFILE[P.name])return _pf(it,backId);
+  const D=personData(it);const ids=profileFamily(D);
+  const m=N['732:32348'];if(m)ROUTE['732:32348']=()=>{const f=clone(m);for(const c of f.k)if(c.y==='TE'&&c.ch)c.ch=c.ch.replace(/Karin Eldar/g,D.name).replace(/\bKarin\b/g,D.first);return addFrame('732:32348',f);};
+  return ids['709:26284'];
+};
+for(const id of OWN_PROFILE)POP_FAMILY[id]='me';
+// "My Profile" opens with every tile closed — just its title — and each one opens on tap
+ROUTE['ME:closed']=()=>{const f=clone(N['709:26284']);personalize(f,meData(),{});
+  const ab=f.k.find(c=>c.y==='TE'&&/^About/.test(c.ch||''));if(ab){ab.ch='About';ab.sg=[[0,5,...ab.sg[0].slice(2)]];ab.sg[0][5]='#3361ff';}
+  const r33=f.k.find(c=>c.n==='Rectangle 33');const tr=(f.k.find(c=>c.n==='Rectangle 37').r||[])[0];
+  if(r33){r33.f=[{t:'S',c:'#dee6ff',o:1}];r33.r=[{t:'ON_CLICK',a:[{n:'NAVIGATE',d:'709:26284',tr:tr?clone(tr.a[0].tr):{...GENTLE}}]}];}
+  const p=f.k.find(c=>c.n==='Rectangle 30');if(p&&!(p.r&&p.r.length))p.r=[{t:'ON_CLICK',a:[{n:'NAVIGATE',d:'709:26368',tr:{t:'SMART_ANIMATE',du:.77,e:'GENTLE'}}]}];
+  return addFrame('709:26284',f);};
+N['ME:closed']={i:'ME:closed',y:'FR',n:'me',k:[],w:402,h:874,x:0,Y:0};POP_FAMILY['ME:closed']='me';
+
+/* ---------- settings ---------- */
+const SET_COLORS=['#3361ff','#ec5256','#ffa1ca','#ffda7c','#6f9077','#82d1d6','#de6224','#7c667c','#c6daa2','#1e2c59'];
+function lbl(n,x,y,w,t,col,size=16,wt='Bold'){return {n,y:'TE',x,Y:y,w,h:22,ch:t,ah:'L',av:'T',ar:'NONE',sg:[[0,t.length,'Helvetica Neue',wt,size,col,1,'%105','%0',0,0]]};}
+function tile(n,x,y,w,h,col,cr=4,r){const o={n,y:'RE',x,Y:y,w,h,f:[{t:'S',c:col,o:1}],cr,fixc:1};if(r)o.r=r;return o;}
+const act=(o)=>[{t:'ON_CLICK',a:[{n:'APP',...o}]}];
+function settingsFrame(){
+  ST.prefs=ST.prefs||{crews:true,msgs:true,credits:false,lang:'English',vis:'Everyone'};
+  const A=accent(),T=tintOf(A),I=ink(A),pr=ST.prefs;const f=clone(N['709:26284']);
+  const keep=f.k.filter(c=>c.n==='Status bar'||/^My Profile/.test(c.ch||''));
+  const title=keep.find(c=>/^My Profile/.test(c.ch||''));if(title){const a='Your\n',b='Settings';title.ch=a+b;title.sg=[[0,a.length,...title.sg[0].slice(2)],[a.length,title.ch.length,...title.sg[1].slice(2)]];}
+  const k=[];
+  // colour
+  k.push(tile('set-color',13,208,377,117,T),lbl('set-color-l',26,219,200,'App colour',I));
+  SET_COLORS.forEach((c,i)=>{const x=26+i*35.5,on=c===A;k.push(tile('sw-'+i,x,262,30,44,c,4,act({f:'set',k:'accent',v:c})));
+    if(on)k.push({n:'sw-on',y:'RE',x:x+10,Y:296,w:10,h:4,f:[{t:'S',c:'#ffffff',o:1}],cr:2,fixc:1});});
+  // avatar
+  k.push(tile('set-avatar',13,338,143,143,A,4,[{t:'ON_CLICK',a:[{n:'NAVIGATE',d:'709:27721',tr:{...GENTLE}}]}]),lbl('set-avatar-l',26,349,110,'Avatar',lum(A)>.55?mix(A,'#000000',.62):'#ffffff'));
+  {const g=ST.avatar||DEF_AVATAR;const [w0,h0]=svgSize(g);const s=Math.min(84/h0,90/w0);k.push({n:'set-avatar-g',y:'GR',g,fit:1,x:84-w0*s/2+4,Y:470-h0*s,w:w0*s,h:h0*s});}
+  // notifications
+  k.push(tile('set-notif',169,338,221,247,T),lbl('set-notif-l',182,349,190,'Notifications',I));
+  [['crews','New crews'],['msgs','Messages'],['credits','Credit updates']].forEach(([key,t],i)=>{const y=398+i*58,on=pr[key];
+    k.push(lbl('n-'+key,182,y+14,120,t,I,14,'Bold'));
+    k.push(tile('t-'+key,320,y,57,42,on?A:'#ffffff',4,act({f:'set',k:key,v:!on})));
+    k.push(lbl('t-'+key+'-l',320,y+13,57,on?'On':'Off',on?(lum(A)>.55?mix(A,'#000000',.62):'#ffffff'):'#aeaeb2',13));k[k.length-1].ah='C';});
+  // language
+  k.push(tile('set-lang',13,494,143,91,T),lbl('set-lang-l',26,505,120,'Language',I));
+  ['English','עברית'].forEach((t,i)=>{const on=pr.lang===t;k.push(tile('l-'+i,26+i*62,537,56,36,on?A:'#ffffff',4,act({f:'set',k:'lang',v:t})));
+    k.push(lbl('l-'+i+'-l',26+i*62,547,56,t,on?(lum(A)>.55?mix(A,'#000000',.62):'#ffffff'):'#aeaeb2',13));k[k.length-1].ah='C';});
+  // details · visibility
+  k.push(tile('set-details',13,598,143,117,T,4,[{t:'ON_CLICK',a:[{n:'NAVIGATE',d:'709:29331',tr:{...GENTLE}}]}]),lbl('set-details-l',26,609,120,'My details',I));
+  {const D=meData();const t=`${D.email}\n${D.link}\n${D.insta}`;const n=lbl('set-details-v',26,640,124,t,I,11,'Regular');n.h=60;n.sg[0][7]='%140';k.push(n);}
+  k.push(tile('set-vis',247,598,143,117,T),lbl('set-vis-l',260,609,120,'Visible to',I));
+  ['Everyone','My college'].forEach((t,i)=>{const on=pr.vis===t;k.push(tile('v-'+i,260,637+i*36,117,30,on?A:'#ffffff',4,act({f:'set',k:'vis',v:t})));
+    k.push(lbl('v-'+i+'-l',272,644+i*36,100,t,on?(lum(A)>.55?mix(A,'#000000',.62):'#ffffff'):'#aeaeb2',13));});
+  // start over
+  k.push(tile('set-restart',13,728,377,133,T,[4,4,50,50],act({f:'restart'})),lbl('set-restart-l',26,739,300,'Start over',I),
+    lbl('set-restart-v',26,764,320,'Go through onboarding again, from the splash.',mix(I,'#ffffff',.25),13,'Regular'));
+  k.push({n:'home-btn',y:'GR',g:'a0o6sp30d',x:169,Y:598,w:65,h:65,cr:4,r:HOME_TAP()});
+  const si=keep.findIndex(c=>c.n==='Status bar');f.k=[...keep.slice(0,si),...k,...keep.slice(si)];
+  f.r=[{t:'ON_DRAG',a:[{n:'NAVIGATE',d:'709:26284',tr:{...PUSHB}}]}];
+  return addFrame('709:26284',f);
+}
+ROUTE[SETTINGS_ID]=settingsFrame;N[SETTINGS_ID]={i:SETTINGS_ID,y:'FR',n:'settings',k:[],w:402,h:874,x:0,Y:0};
+POP_FAMILY[SETTINGS_ID]='settings';
+
+/* ---------- search: everything, as you type ---------- */
+function searchIndex(){
+  const out=[];
+  for(const [col,p] of Object.entries(PEOPLE)){const it={color:'#'+col,person:{name:p[0],year:p[1],college:p[2],dept:p[3],skill:p[4],credits:p[5]},char:null};
+    const g=(ST.grids.dept&&Object.values(ST.grids.dept.items).find(x=>x.color&&x.color.slice(1).toLowerCase()===col));if(g)it.char=g.char;
+    const D=personData(g||it);
+    out.push({type:'person',title:D.name,sub:`${D.dept} · ${D.year} · ${D.college}`,color:D.color,g:D.g,tags:[D.dept,D.college,D.year+' year',...D.skills,...D.projects].join(' '),it:g||it});}
+  for(const k of Object.keys(STUDY)){const [d,c]=STUDY[k];out.push({type:'dept',title:d,sub:'Department',color:c,tags:d});}
+  for(const c of ['HIT','Shenkar','Bezalel'])out.push({type:'college',title:c,sub:'College',color:'#82d1d6',tags:c+' college'});
+  for(const y of ['1st','2nd','3rd','4th'])out.push({type:'year',title:y+' year',sub:'Year of study',color:'#e9dbf3',tags:y+' year'});
+  for(const s of SKILL_POOL)out.push({type:'skill',title:s,sub:'Skill',color:'#ffe6ab',tags:s});
+  for(const [p,owner,d] of PROJECTS){const pc=(Object.entries(PEOPLE).find(([c,v])=>v[0]===owner)||[])[0];
+    out.push({type:'project',title:p,sub:`Project · ${owner}`,color:pc?'#'+pc:'#dcedbd',tags:`${p} ${owner} ${d}`,owner});}
+  return out;
+}
+function searchResults(q){
+  const idx=searchIndex();q=q.trim().toLowerCase();
+  if(!q)return idx.filter(r=>['Maya Levi','Industrial Design','Bezalel','Animation','Karin Eldar','Typography','Ceramic tableware brand','Photography'].includes(r.title)).slice(0,8);
+  const words=q.split(/\s+/);
+  const score=r=>{const t=r.title.toLowerCase(),tags=(r.tags||'').toLowerCase();let s=0;
+    for(const w of words){ if(t.startsWith(w))s+=10;else if(t.split(/[\s·:-]+/).some(x=>x.startsWith(w)))s+=7;else if(t.includes(w))s+=4;
+      else if(tags.split(/[\s·]+/).some(x=>x.startsWith(w)))s+=r.type==='person'?3:2;else return 0; }
+    return s+(r.type==='person'?1:0)+(r.type==='dept'||r.type==='college'?.5:0);};
+  return idx.map(r=>[score(r),r]).filter(x=>x[0]>0).sort((a,b)=>b[0]-a[0]).slice(0,8).map(x=>x[1]);
+}
+// eight tiles under the field (the Figma layout); the first person found gets the big tile with their face
+const SR_TILES=[[0,65,169,117],[182,65,195,117],[0,195,221,104],[234,195,143,182],[0,312,143,195],[156,390,221,117],[0,520,221,130],[234,520,143,130]];
+function renderSearch(f,st){
+  const q=ST.q||'';if(f._q===q&&f._rendered)return;f._q=q;f._rendered=1;
+  for(const e of [...f.children])if(e._n&&/^(tile|label|avatar|sr)-/.test(e._n.n))e.remove();
+  const res=searchResults(q);f._res=res;
+  const base=f._box.y;const maxH=874-base-(['Empty','Typed'].includes(st)?298+12:16);
+  res.forEach((r,i)=>{ const [x,y,w,h]=SR_TILES[i];if(y+h>maxH&&i>0)return;
+    const fg=lum(r.color)>.5?mix(r.color,'#000000',.62):'#ffffff';
+    const t=build({n:'sr-tile-'+i,y:'RE',x,Y:y,w,h,f:[{t:'S',c:r.color,o:1}],cr:(y+h>=640?(x===0?[4,4,4,50]:[4,4,50,4]):4),fixc:1});t.classList.add('hot');f.appendChild(t);
+    const L=build({n:'sr-label-'+i,y:'TE',x:x+13,Y:y+11,w:w-26,h:60,ch:r.title+'\n'+r.sub,ah:'L',av:'T',ar:'NONE',
+      sg:[[0,r.title.length,'Helvetica Neue','Bold',16,fg,1,'%105','%0',0,0],[r.title.length,r.title.length+1+r.sub.length,'Helvetica Neue','Regular',12,fg,.75,'%150','%0',0,0]]});f.appendChild(L);
+    if(r.type==='person'&&r.g){const [w0,h0]=svgSize(r.g);const s=Math.min(h*.55/h0,w*.45/w0);const W=w0*s,H=h0*s;
+      f.appendChild(build({n:'sr-face-'+i,y:'GR',g:r.g,fit:1,x:x+w-W-12,Y:y+h-H-10,w:W,h:H}));}
+    if(!RM)t.animate([{opacity:0,transform:'scale(.85)'},{opacity:1,transform:'none'}],{duration:260,delay:i*25,easing:'cubic-bezier(.2,.8,.2,1)',fill:'backwards'});
+  });
+}
+function openResult(r){
+  if(!r)return;
+  if(r.type==='person'){const it=r.it;if(!it.person.label)it.person.label=it.person.name;show(profileFrame(it,cur._fid),GENTLE);return;}
+  if(r.type==='project'){const e=searchIndex().find(x=>x.type==='person'&&x.title===r.owner);if(e)return openResult(e);}
+  // a department, college, year or skill narrows the search to the people who have it
+  ST.q=r.title.replace(/ year$/,'')+' ';const f=[...cur.querySelectorAll('.n')].find(e=>e._inst&&SETOF[e._inst.cur]===SEARCH_SET);
+  if(f){f._rendered=0;if(NK)NK._prev=NK.value=ST.q;bindField(f);}
+}
+
+// "What do you bring": the 15 skills of the department you chose
+ROUTE['709:29101']=()=>{
+  const list=DEPT_SKILLS[ST.dept||'Visual Communication'];if(!list)return '709:29101';
+  const f=clone(N['709:29101']);const chips=f.k.filter(c=>c.y==='IN'&&c.n!=='Status bar').sort((a,b)=>(a.Y-b.Y)||(a.x-b.x));
+  chips.forEach((c,i)=>{const t=list[i];if(!t)return;c.lab=t;c.n='chip-'+i;for(const k of c.k||[])if(k.n==='label')tx(k,t);});
+  return addFrame('709:29101',f);
+};
+/* ---------- wiring ---------- */
+function prepPart4(){
+  TF[SEARCH_SET]={key:'q',val:'val-search',pill:'pill-search',max:40,ok:()=>true,fixed:1};
+  FIELD_SETS.push(SEARCH_SET);
+  // the menu: Settings opens the settings screen (Search stays on search)
+  for(const c of N[MENU].k)if(c.n==='Rectangle 38')c.r=[{t:'ON_CLICK',a:[{n:'NAVIGATE',d:SETTINGS_ID,tr:{t:'SMART_ANIMATE',du:.77,e:'GENTLE'}}]}];
+  POP_FAMILY['709:26157']='search';
+  for(const c of N[MENU].k)if(c.n==='Rectangle 32')for(const r of c.r||[])for(const a of r.a)if(a.d==='709:26284')a.d='ME:closed';
+}
+/* ---------- hooks ---------- */
+const _act4=APP.action;
+APP.action=(el,a)=>{
+  if(a.f==='set'){ ST.prefs=ST.prefs||{}; if(a.k==='accent')ST.accent=a.v; else ST.prefs[a.k]=a.v; show(settingsFrame(),{t:'SMART_ANIMATE',du:.45,e:'EASE_OUT'}); return; }
+  if(a.f==='restart'){ start('f1'); return; }
+  _act4(el,a);
+};
+const _click4=APP.click;
+APP.click=el=>{
+  if(el._n&&/^sr-/.test(el._n.n)){const f=fieldOf(el);const i=+el._n.n.split('-').pop();if(f&&f._res){openResult(f._res[i]);return true;}}
+  return _click4(el);
+};
+const _oc4=APP.onChange;
+APP.onChange=(ne,dest)=>{ _oc4(ne,dest);
+  // a chip keeps its department label when it switches on / off
+  if(ne._inst&&ne._inst.orig&&ne._inst.orig.lab){const l=[...ne.children].find(c=>c._n&&c._n.n==='label');if(l){const sp=l.querySelector('span');if(sp)sp.textContent=ne._inst.orig.lab;[...l.querySelectorAll('span')].slice(1).forEach(x=>x.textContent='');}}
+  // the skills you chose in "What do you bring" go to your profile
+  if(cur&&baseOf(cur._fid)==='709:29101'&&isChipSet(SETOF[dest]))setTimeout(()=>{ST.skills=[...cur.querySelectorAll('.n')].filter(e=>e._inst&&e.style.pointerEvents!=='none'&&isOn(e)).map(e=>e._inst.orig.lab||e._n.n.replace(/^Skill · /,''));},0);
+};
+</script>
+<script>
+/* ======================================================================
+   Part 5 — scanning from Figma, settings v2, chats, dark mode.
+   ====================================================================== */
+
+/* ---------- scanning: the four Figma frames ("סריקה"), faces centred ---------- */
+const SCAN_FIG=['709:27226','709:27346','709:27465','709:27593'];
+scanFrames=function(){
+  const res=N['709:26102'],RES=res.k.filter(c=>c.y==='RE'&&/^Rectangle/.test(c.n));
+  const tilesOf=id=>N[id].k.filter(c=>(c.y==='RE'||c.n==='Group 1')&&c.x>=0&&c.x<402&&c.Y>340&&c.Y<874).map(c=>({n:c.n,x:c.x,Y:c.Y,w:c.w,h:c.h}));
+  const steps=SCAN_FIG.map(tilesOf);
+  // the last Figma shuffle hands each tile to its nearest "Mission crew" tile, so it glides into the results
+  const cen=(t,y0,h)=>({x:(t.x+t.w/2-13)/377,y:(t.Y+t.h/2-y0)/h});const last=steps[3];const rename={};const used=new Set();
+  const pairs=[];for(const t of last)for(const r of RES){const a=cen(t,351,510),b=cen(r,208,653);pairs.push([Math.hypot(a.x-b.x,a.y-b.y),t.n,r.n]);}
+  pairs.sort((a,b)=>a[0]-b[0]);for(const [,tn,rn] of pairs){if(rename[tn]||used.has(rn))continue;rename[tn]=rn;used.add(rn);}
+  const chars=scanChars(),names=last.map(t=>t.n);const ids=[];
+  steps.forEach((tiles,k)=>{
+    const f=clone(N['709:27226']);const keep=f.k.filter(c=>c.n==='Status bar'||(c.y==='TE'&&/^Scanning/.test(c.ch||'')));const gen=[],top=[];
+    for(const t of tiles){const ni=names.indexOf(t.n),nm=rename[t.n]||('scan-'+t.n);
+      const col=SCAN_PAL[(ni*5+k*11)%SCAN_PAL.length];
+      const cr=[4,4,4,4];if(t.Y+t.h>=857){if(t.x<=14)cr[3]=50;if(t.x+t.w>=389)cr[2]=50;}
+      gen.push({n:nm,y:'RE',fixc:1,x:t.x,Y:t.Y,w:t.w,h:t.h,cr,f:[{t:'S',c:col,o:1}]});
+      const g=chars[(ni+k*3)%chars.length],[cw,ch]=svgSize(g),sc=Math.min(.62*t.w/cw,.7*t.h/ch);
+      top.push({n:'face-'+nm,y:'GR',g,fit:1,x:t.x+(t.w-cw*sc)/2,Y:t.Y+(t.h-ch*sc)/2,w:cw*sc,h:ch*sc});}
+    const si=keep.findIndex(c=>c.n==='Status bar');f.k=[...keep.slice(0,si),...gen,...top,...keep.slice(si)];f.r=[];ids.push(addFrame('709:27226',f));
+  });
+  ids.forEach((id,k)=>{N[id].r=[{t:'AFTER_TIMEOUT',d:k===0?.5:.4,a:[{n:'NAVIGATE',d:ids[k+1]||'709:26102',tr:{t:'SMART_ANIMATE',du:k===ids.length-1?.9:.77,e:'GENTLE'}}]}];});
+  return ids[0];
+};
+ROUTE['709:27226']=scanFrames;
+
+/* ---------- settings: a profile of your own choices ----------
+   Same language as "My Profile": the title, the tinted tiles, the one tile in
+   your colour. Avatar, colour and details open the onboarding screens; a swipe
+   left brings you back here (not on through the onboarding). */
+function counterTile(k,key,label,x,y,w,h,cr,A,T,I){
+  const v=ST[key];const out=[tile('c-'+key,x,y,w,h,T,cr),lbl('c-'+key+'-l',x+13,y+11,w-26,label,I)];
+  const num=lbl('c-'+key+'-v',x+13,y+h-58,w-120,String(v),I,40);num.h=48;out.push(num);
+  [['−',-1],['+',1]].forEach(([s,d],i)=>{const bx=x+w-13-50-(1-i)*58;
+    out.push(tile('c-'+key+(d<0?'-m':'-p'),bx,y+h-63,50,50,'#ffffff',4,act({f:'count',k:key,d})),Object.assign(lbl('c-'+key+(d<0?'-ml':'-pl'),bx,y+h-50,50,s,I,22),{ah:'C'}));});
+  return out;
+}
+settingsFrame=function(){
+  const A=accent(),T=tintOf(A),I=ink(A),W=lum(A)>.55?mix(A,'#000000',.62):'#ffffff',D=meData();
+  const f=clone(N['709:26284']);
+  const keep=f.k.filter(c=>c.n==='Status bar'||/^My Profile/.test(c.ch||''));
+  const title=keep.find(c=>/^My Profile/.test(c.ch||''));
+  if(title){const a='Settings\n',b=D.name;title.ch=a+b;title.sg=[[0,a.length,...title.sg[0].slice(2)],[a.length,title.ch.length,...title.sg[1].slice(2)]];}
+  const go=(d,from)=>[{t:'ON_CLICK',a:[{n:'APP',f:'edit',d,from}]}];
+  const k=[];
+  // avatar — tall tile like "Skills"
+  k.push(tile('s-avatar',13,208,143,312,T,4,go('709:27721','709:27721')),lbl('s-avatar-l',26,219,110,'Avatar',I),
+    lbl('s-avatar-s',26,243,110,'Tap to change',mix(I,'#ffffff',.3),13,'Regular'));
+  {const g=ST.avatar||DEF_AVATAR;const [w0,h0]=svgSize(g);const s=Math.min(190/h0,110/w0);k.push({n:'s-avatar-g',y:'GR',g,fit:1,x:84.5-w0*s/2,Y:505-h0*s,w:w0*s,h:h0*s});}
+  // colour — the one tile in your colour, like "About"
+  k.push(tile('s-color',169,208,221,234,A,4,go('709:28883','709:28652')),lbl('s-color-l',182,219,190,'Colour',W),
+    lbl('s-color-s',182,243,190,'Choose your colour again. The whole app follows it.',W,13,'Regular'));
+  k[k.length-1].h=60;
+  // home button, as on your profile
+  k.push({n:'home-btn',y:'GR',g:'a0o6sp30d',x:169,Y:455,w:65,h:65,cr:4,r:HOME_TAP()});
+  // details
+  k.push(tile('s-details',247,455,143,195,T,4,go('709:28996','901:16128')),lbl('s-details-l',260,466,120,'Details',I));
+  {const n=lbl('s-details-v',260,492,124,`${D.email}\n${D.link}\n${D.insta}`,I,12,'Regular');n.h=120;n.sg[0][7]='%140';k.push(n);}
+  // credits and projects
+  k.push(...counterTile(k,'credits','Credits',13,533,221,117,4,A,T,I));
+  k.push(...counterTile(k,'led','Projects I led',13,663,182,195,[4,4,4,50],A,T,I));
+  k.push(...counterTile(k,'joined','Projects I joined',208,663,182,195,[4,4,50,4],A,T,I));
+  const si=keep.findIndex(c=>c.n==='Status bar');f.k=[...keep.slice(0,si),...k,...keep.slice(si)];
+  f.r=[{t:'ON_DRAG',a:[{n:'NAVIGATE',d:'709:26284',tr:{...PUSHB}}]}];
+  return addFrame('709:26284',f);
+};
+ROUTE[SETTINGS_ID]=settingsFrame;
+const _meData=meData;
+meData=function(){const D=_meData();D.credits=ST.credits;D.done=ST.led+ST.joined;D.waiting=Math.max(0,ST.led-1)||1;D.earned=ST.credits*60;return D;};
+
+/* ---------- chats: answers you choose, a conversation that never scrolls ----------
+   No typing and no scrolling. Each chat moves forward through three answers you
+   can pick. Only the newest messages are full size; older ones fold into a thin
+   "spine" at the top, so the whole conversation is always on one screen. */
+const CHATS=[
+  {id:'crew',name:'Mission crew',sub:'Ceramic tableware brand',color:null,who:'Maya',script:[
+    {in:'Welcome to the crew! Maya (product), Noam (motion) and you on branding.',opts:[['Hi all! Happy to be here.',1],['When do we start?',2],['Who leads the brand?',3]]},
+    {in:'We kick off Sunday at Shenkar, 10:00. Bring sketches.',opts:[['Perfect, I\'ll be there.',4],['Can we do it online?',5]]},
+    {in:'Sunday 10:00, room 204. First thing: the name and the logo.',opts:[['I\'ll bring 3 directions.',4],['Can we do it online?',5]]},
+    {in:'You do. The brand is yours, Maya leads the objects.',opts:[['Deal. I\'ll start with a moodboard.',4]]},
+    {in:'Amazing. See you Sunday ✦',opts:[['Back to chats','back'],['Open my project','project']],end:1},
+    {in:'Sure, Zoom link goes out Saturday night.',opts:[['Thanks, see you there.',4]]},
+  ]},
+  {id:'karin',color:'#ffda7c',script:[
+    {in:'Hi! Saw your profile. Want to help with branding for my lamp project?',opts:[['Yes! Tell me more.',1],['What would I do?',2],['Not this semester.',3]]},
+    {in:'It\'s a modular lamp. I need a name, a logo and the packaging look.',opts:[['Love it. When\'s the deadline?',4],['Send me your sketches.',5]]},
+    {in:'Name, logo and packaging. About 3 weeks, it counts as 1 credit.',opts:[['I\'m in.',4],['Send me your sketches.',5]]},
+    {in:'No worries! I\'ll keep you in mind for next time.',opts:[['Thanks, good luck!','back']],end:1},
+    {in:'Mid January. I\'ll add you to the crew now.',opts:[['Great, talk soon.','back'],['Open Karin\'s profile','profile']],end:1},
+    {in:'Sending them tonight. They\'re rough, don\'t judge 😅',opts:[['Rough is perfect.',4]]},
+  ]},
+  {id:'maya',color:'#c92327',script:[
+    {in:'The mug prototypes are out of the kiln!',opts:[['Show me!',1],['How did the glaze come out?',1]]},
+    {in:'The blue cracked a bit, but I kind of love it. Should the logo be on the bottom?',opts:[['Bottom, small and quiet.',2],['On the side, bold.',2]]},
+    {in:'Agreed. I\'ll send you the measurements tomorrow.',opts:[['Thanks Maya!','back']],end:1},
+  ]},
+  {id:'doron',color:'#a1ced7',script:[
+    {in:'Night market posters: we\'re short one typographer. Interested?',opts:[['Yes, I love posters.',1],['Who else is in?',2]]},
+    {in:'Great! It\'s 6 posters, risograph, 2 colours.',opts:[['Count me in.',3],['Send me the brief.',3]]},
+    {in:'Me on illustration and Lior on photo.',opts:[['Count me in.',3]]},
+    {in:'Done, I added you. First meeting is Tuesday.',opts:[['See you Tuesday!','back']],end:1},
+  ]},
+  {id:'noam',color:'#c78f00',script:[
+    {in:'Quick one: can you design the titles for my stop-motion?',opts:[['Sure, what\'s the mood?',1],['How long is the film?',1]]},
+    {in:'It\'s 2 minutes, about a lost glove. Warm and a bit sad.',opts:[['Hand-drawn titles then.',2],['A soft serif.',2]]},
+    {in:'Yes!! Exactly that.',opts:[['I\'ll send sketches Friday.','back']],end:1},
+  ]},
+  {id:'shira',color:'#ec8293',script:[
+    {in:'Your Hebrew lettering is 🔥. Want to swap feedback on our typefaces?',opts:[['Absolutely.',1],['Maybe next week.',2]]},
+    {in:'I\'ll send my specimen tonight.',opts:[['Can\'t wait.','back']],end:1},
+    {in:'Sure, ping me whenever.',opts:[['Will do.','back']],end:1},
+  ]},
+];
+function chatPerson(c){ if(c.name)return c;const p=PEOPLE[c.color.slice(1)];const it={color:c.color,person:{name:p[0],year:p[1],college:p[2],dept:p[3],skill:p[4],credits:p[5]}};
+  const g=ST.grids.dept&&Object.values(ST.grids.dept.items).find(x=>x.color&&x.color.toLowerCase()===c.color);const D=personData(g||it);
+  return Object.assign(c,{name:D.name,first:D.first,g:D.g||(g&&g.char&&g.char.g),it:g||it});}
+ST.chat=ST.chat||{};
+function chatState(id){ if(!ST.chat)ST.chat={};if(!ST.chat[id]){const c=CHATS.find(x=>x.id===id);ST.chat[id]={step:0,log:[{from:'in',t:c.script[0].in}],typing:false};}return ST.chat[id]; }
+function chatsFrame(){
+  const A=accent(),T=tintOf(A),I=ink(A);const f=clone(N['709:26284']);
+  const keep=f.k.filter(c=>c.n==='Status bar'||/^My Profile/.test(c.ch||''));
+  const title=keep.find(c=>/^My Profile/.test(c.ch||''));if(title){const a='Your\n',b='Chats';title.ch=a+b;title.sg=[[0,a.length,...title.sg[0].slice(2)],[a.length,title.ch.length,...title.sg[1].slice(2)]];}
+  // the same bento as "Lead the way": the home button in the middle of the screen
+  const L=[['karin',13,195,143,169,4],['crew',169,195,221,221,4],['maya',13,377,143,117,4],['doron',247,429,143,221,4],
+    ['noam',13,507,221,143,4],['shira',13,663,221,195,[4,4,4,50]]];
+  const k=[];
+  for(const [id,x,y,w,h,cr] of L){const c=chatPerson(CHATS.find(z=>z.id===id));const col=c.color||A,fg=lum(col)>.5?mix(col,'#000000',.62):'#ffffff';
+    const s=chatState(id),lastMsg=s.log[s.log.length-1];const unread=lastMsg.from==='in'&&!s.read;
+    k.push(tile('chat-'+id,x,y,w,h,col,cr,act({f:'chat',id})),lbl('chat-'+id+'-n',x+13,y+11,w-40,c.name,fg));
+    const sn=lbl('chat-'+id+'-m',x+13,y+35,Math.min(w-26,w>200?220:w-26),(lastMsg.from==='me'?'You: ':'')+lastMsg.t,fg,12,'Regular');sn.h=h>150?64:34;sn.sg[0][6]=.85;sn.sg[0][7]='%130';k.push(sn);
+    if(unread)k.push({n:'chat-'+id+'-dot',y:'RE',x:x+w-23,Y:y+13,w:10,h:10,cr:5,f:[{t:'S',c:fg,o:1}],fixc:1});
+    if(c.g&&h>=117){const [w0,h0]=svgSize(c.g);const sc=Math.min(h*.5/h0,w*.4/w0);k.push({n:'chat-'+id+'-g',y:'GR',g:c.g,fit:1,x:x+w-w0*sc-12,Y:y+h-h0*sc-10,w:w0*sc,h:h0*sc});}
+    if(id==='crew')['maya','noam','karin'].forEach((p,i)=>{const q=chatPerson(CHATS.find(z=>z.id===p));if(!q.g)return;const [w0,h0]=svgSize(q.g);const sc=Math.min(60/h0,50/w0);
+      k.push({n:'chat-crew-g'+i,y:'GR',g:q.g,fit:1,x:x+w-(i+1)*62,Y:y+h-h0*sc-10,w:w0*sc,h:h0*sc});});
+  }
+  k.push({n:'home-btn',y:'GR',g:'a0o6sp30d',x:169,Y:429,w:65,h:65,cr:4,r:HOME_TAP()});
+  k.push(tile('chat-new',247,663,143,195,T,[4,4,50,4],[{t:'ON_CLICK',a:[{n:'NAVIGATE',d:'709:26157',tr:{...GENTLE}}]}]),lbl('chat-new-l',260,674,120,'New chat',I),
+    lbl('chat-new-s',260,698,120,'Find anyone by name, skill or college',mix(I,'#ffffff',.3),12,'Regular'));k[k.length-1].h=50;
+  const si=keep.findIndex(c=>c.n==='Status bar');f.k=[...keep.slice(0,si),...k,...keep.slice(si)];f.r=[];
+  return addFrame('C:chats',f);
+}
+const lineH=(t,w,size)=>{MEASURE=MEASURE||document.createElement('canvas').getContext('2d');MEASURE.font=`400 ${size}px "Helvetica Neue",Helvetica,Arial,sans-serif`;
+  let lines=1,cur='';for(const word of t.split(' ')){const tryL=cur?cur+' '+word:word;if(MEASURE.measureText(tryL).width>w&&cur){lines++;cur=word;}else cur=tryL;}return lines;};
+function chatFrame(id){
+  const c=chatPerson(CHATS.find(z=>z.id===id));const s=chatState(id);s.read=1;const A=accent(),T=tintOf(A),I=ink(A),pc=c.color||A;
+  const pT=tintOf(pc),pI=ink(pc),meFg=lum(A)>.55?mix(A,'#000000',.62):'#ffffff';
+  const f=clone(N['709:26284']);const keep=f.k.filter(c2=>c2.n==='Status bar'||/^My Profile/.test(c2.ch||''));
+  const title=keep.find(c2=>/^My Profile/.test(c2.ch||''));
+  if(title){const a=(c.first?'Chat with':'Crew of')+'\n',b=c.first||c.sub;title.ch=a+b;title.sg=[[0,a.length,...title.sg[0].slice(2)],[a.length,title.ch.length,...title.sg[1].slice(2)]];title.sg[1][5]=c.color?ink(c.color):I;title.w=300;}
+  const k=[];
+  // messages: newest at the bottom of the message area, older ones fold into the spine
+  const top=208,bottom=640,gap=13;let y=bottom;const items=[];
+  const list=[...s.log];if(s.typing)list.push({from:'in',t:'• • •',typing:1});
+  for(let i=list.length-1;i>=0;i--){const m=list[i];const w=Math.min(300,Math.max(90,Math.ceil(textW(m.t,15,400))+30));
+    const tw=w-26,h=Math.max(46,lineH(m.t,tw,15)*20+24);if(y-h<top+40&&items.length>=1){break;}y-=h;items.unshift({m,i,x:m.from==='me'?390-w:13,y,w,h});y-=gap;}
+  const folded=list.length-items.length;
+  for(let i=0;i<Math.min(folded,12);i++){const m=list[i];k.push({n:'msg-'+i,y:'RE',x:m.from==='me'?250:13,Y:top+i*9,w:140,h:5,cr:2.5,f:[{t:'S',c:m.from==='me'?A:pT,o:1}],fixc:1});}
+  for(const it of items){const m=it.m,me=m.from==='me';
+    k.push({n:'msg-'+it.i,y:'RE',x:it.x,Y:it.y,w:it.w,h:it.h,cr:4,f:[{t:'S',c:me?A:pT,o:1}],fixc:1});
+    const t=lbl('msg-'+it.i+'-t',it.x+13,it.y+12,it.w-26,m.t,me?meFg:pI,15,'Regular');t.h=it.h-20;t.sg[0][7]='%133';if(m.typing){t.sg[0][3]='Bold';}k.push(t);}
+  // the answers you can give
+  const step=c.script[s.step];
+  if(!s.typing&&step){const opts=step.opts;const n=opts.length,H=Math.floor((858-663-13*(n-1))/n);
+    opts.forEach(([t,to],i)=>{const yy=663+i*(H+13),last=i===n-1;
+      k.push(tile('opt-'+i,13,yy,377,H,i===0?A:T,last?[4,4,50,50]:4,act({f:'reply',id,i})));
+      const L=lbl('opt-'+i+'-t',29,yy+(H-20)/2,345,t,i===0?meFg:I,16);L.h=22;k.push(L);});
+  }
+  k.push({n:'home-btn',y:'GR',g:'a0o6sp30d',x:325,Y:100,w:65,h:65,cr:4,r:HOME_TAP()});
+  const si=keep.findIndex(c2=>c2.n==='Status bar');f.k=[...keep.slice(0,si),...k,...keep.slice(si)];
+  f.r=[{t:'ON_DRAG',a:[{n:'NAVIGATE',d:'C:list',tr:{...PUSHB}}]}];
+  return addFrame('C:chat',f);
+}
+ROUTE['C:list']=chatsFrame;N['C:list']={i:'C:list',y:'FR',n:'chats',k:[],w:402,h:874,x:0,Y:0};
+POP_FAMILY['C:list']='chats';
+function chatReply(id,i){
+  const c=CHATS.find(z=>z.id===id),s=chatState(id),step=c.script[s.step];if(!step||s.typing)return;
+  const [t,to]=step.opts[i];
+  if(to==='back'){show('C:list',{t:'SMART_ANIMATE',du:.6,e:'GENTLE'});return;}
+  if(to==='project'){show('709:26483',{...GENTLE});return;}
+  if(to==='profile'){const p=chatPerson(c);show(profileFrame(p.it,cur._fid),GENTLE);return;}
+  s.log.push({from:'me',t});s.typing=true;const SA={t:'SMART_ANIMATE',du:.55,e:'CUSTOM_CUBIC_BEZIER',cb:{x1:.3,y1:0,x2:.1,y2:1}};
+  show(chatFrame(id),SA);
+  const tok=cur;setTimeout(()=>{ s.typing=false;s.step=to;s.log.push({from:'in',t:c.script[to].in});
+    if(cur&&cur.isConnected&&baseOf(cur._fid)==='C:chat')show(chatFrame(id),SA); },1100+Math.min(900,c.script[to].in.length*12));
+}
+
+/* ---------- edits from settings come back to settings ---------- */
+APP.redirect=(id,tr)=>{
+  if(!ST.editFrom||!cur)return id;const here=baseOf(cur._fid);
+  if(here===ST.editFrom&&tr&&tr.t==='PUSH'&&(tr.dir==='LEFT'||tr.dir==='RIGHT')){ST.editFrom=null;return SETTINGS_ID;}
+  return id;
+};
+
+function prepPart5(){
+  // the menu's Chats tile opens the chats
+  for(const c of N[MENU].k)if(c.n==='Rectangle 39')c.r=[{t:'ON_CLICK',a:[{n:'NAVIGATE',d:'C:list',tr:{t:'SMART_ANIMATE',du:.77,e:'GENTLE'}}]}];
+}
+/* ---------- hooks ---------- */
+const _act5=APP.action;
+APP.action=(el,a)=>{
+  if(a.f==='edit'){ST.editFrom=a.from;show(a.d,{...GENTLE});return;}
+  if(a.f==='count'){ST[a.k]=Math.max(0,(ST[a.k]||0)+a.d);show(settingsFrame(),{t:'SMART_ANIMATE',du:.3,e:'EASE_OUT'});return;}
+  if(a.f==='chat'){show(chatFrame(a.id),{...GENTLE});return;}
+  if(a.f==='reply'){chatReply(a.id,a.i);return;}
+  _act5(el,a);
+};
+
+/* ---------- dark mode: white becomes #242424, black type becomes white ---------- */
+const DARKQ=matchMedia('(prefers-color-scheme: dark)');let DARK=DARKQ.matches;
+const DARK_INK=new Set(['#242424','#000000','#2b2b2b','#1c1c1e','#121212','#262626','#1e1e1e','#222222']);
+const _mf=APP.mapFill,_mt=APP.mapText;
+APP.mapFill=(hex,o)=>{ const r=_mf(hex,o);if(!DARK)return r;const h=(r||'').toLowerCase();
+  if(h==='#ffffff')return '#242424'; if(o&&o.pr&&h==='#242424')return '#ffffff';
+  if(h==='#242424'&&o&&(o.n==='bg'||/^seg|^step/.test(o.n||'')))return '#ffffff'; return r; };
+APP.mapText=(hex,size,o)=>{ const r=_mt(hex,size,o);if(!DARK)return r;const h=(r||'').toLowerCase(),nm=o&&o.n||'';
+  if(DARK_INK.has(h)&&!/^(val|txt-|placeholder|hint)/.test(nm))return '#ffffff';
+  if(h==='#ffffff'&&/^(next label|step-label|label)$/.test(nm))return '#242424';
+  return r; };
+function applyDark(){ document.documentElement.classList.toggle('app-dark',DARK); }
+applyDark();
+DARKQ.addEventListener('change',e=>{DARK=e.matches;applyDark();if(cur&&!busy){const id=cur._fid;show(id);}});
+</script>
+<style>
+html.app-dark #phone{background:#242424}
+html.app-dark body.onphone{background:#242424}
+html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [data-nm^="andlorem-splash"] img{filter:invert(.86) hue-rotate(180deg)}
+</style>
+<script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v16';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v19';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
 <script>
 /* ---------- flow controls & boot ---------- */
 let flow='f1';
-function resetState(){HIST.length=0;Object.assign(ST,{year:'',first:'',last:'',email:'',insta:'',folio:'',about:'',budget:'',due:null,padOpen:false,focus:null,college:'',dept:'',accent:null,avatar:null,active:'first',shift:false,grids:{}});}
+function resetState(){HIST.length=0;Object.assign(ST,{credits:3,led:2,joined:5,chat:null,editFrom:null,q:'',skills:null,prefs:null,year:'',first:'',last:'',email:'',insta:'',folio:'',about:'',budget:'',due:null,padOpen:false,focus:null,college:'',dept:'',accent:null,avatar:null,active:'first',shift:false,grids:{}});}
 function start(f){flow=f;for(const k of ['f1','f2'])document.getElementById(k).setAttribute('aria-pressed',k===f);
   resetState();if(cur){cur.remove();cur=null;}busy=false;show(FLOWS[f]);}
 document.getElementById('f1').onclick=()=>start('f1');
@@ -1414,7 +1928,7 @@ window.__lorem={show:id=>{if(cur){cur.remove();cur=null;}busy=false;clearTimers(
   try{
     const [n,s]=await Promise.all([fetch('nodes.json').then(r=>r.json()),fetch('svg.json').then(r=>r.json())]);
     N=n;SVG=s;prepShadows();for(const o of Object.values(N))indexComps(o,null);
-    prep();prepRoutes();prepOnboarding();prepProject();
+    prep();prepRoutes();prepOnboarding();prepProject();prepPart4();prepPart5();
     fetch('splash.mp4').then(r=>{if(!r.ok)throw 0;return r.blob();}).then(b=>{VIDEO=URL.createObjectURL(b);}).catch(()=>{VIDEO=null;});
     fetch('poster.png').then(r=>{if(!r.ok)throw 0;return r.blob();}).then(b=>{POSTER=URL.createObjectURL(b);}).catch(()=>{});
     document.getElementById('msg').remove();
