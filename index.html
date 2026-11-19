@@ -31,7 +31,7 @@ body{background:var(--ground);margin:0;overflow:hidden;font-family:var(--ui);
   -webkit-user-select:none;user-select:none;touch-action:none;isolation:isolate}
 #phone.full{border-radius:0;box-shadow:none}
 /* on a real phone: the page is the app — no grey margins, and the phone's own status bar replaces the drawn one */
-body.onphone{background:#fff}
+body.onphone{background:#fff;padding:0}
 body.onphone #phone .n[data-nm="Status bar"]{visibility:hidden}
 .scr{position:absolute;left:0;top:0;width:402px;height:874px;overflow:hidden}
 .n{position:absolute;box-sizing:border-box}
@@ -76,7 +76,8 @@ const FLOWS={f1:'709:28958',f2:'871:6618'};
 let POSTER='poster.png';
 let N={},SVG={},COMP={},SETOF={},SVGURL={},VIDEO=null;
 const phone=document.getElementById('phone');
-const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+// it's a motion prototype: animations always play (the phone's Reduce Motion setting would turn every transition into a cut); add ?still to the address to turn them off
+const RM=/[?&]still\b/.test(location.search);
 const APP={}; // hooks filled by part 2
 
 /* ---------- easing ---------- */
@@ -457,9 +458,16 @@ phone.addEventListener('pointercancel',()=>{down=null;});
 function fit(){
   const bar=document.getElementById('bar');const W=innerWidth,H=innerHeight;
   const small=W<520;phone.classList.toggle('full',small);bar.classList.toggle('hidebar',small);document.body.classList.toggle('onphone',small);
-  const avH=small?H:H-80,avW=small?W:W-32;
-  const s=Math.min(avW/402,avH/874,small?10:1.25);phone._s=s;phone.style.transform=`scale(${s})`;
-  phone.style.marginTop=small?'0':'28px';
+  const stage=document.getElementById('stage');
+  if(small){
+    // on a phone the drawn status bar is hidden, so the app uses the screen from y=62 down: 402×812
+    const s=Math.min(W/402,H/812);phone._s=s;phone.style.transformOrigin='50% 0';phone.style.transform=`scale(${s})`;
+    stage.style.alignItems='flex-start';phone.style.marginTop=(Math.max(0,(H-812*s)/2)-62*s)+'px';return;
+  }
+  stage.style.alignItems='';phone.style.transformOrigin='center center';
+  const avH=H-80,avW=W-32;
+  const s=Math.min(avW/402,avH/874,1.25);phone._s=s;phone.style.transform=`scale(${s})`;
+  phone.style.marginTop='28px';
 }
 addEventListener('resize',fit);fit();
 </script>
