@@ -39,7 +39,7 @@ body.onphone #phone{touch-action:pan-y}
 body.onphone #phone .n[data-nm="Status bar"]{visibility:hidden}
 .scr{position:absolute;left:0;top:0;width:402px;height:874px;overflow:hidden}
 .n{position:absolute;box-sizing:border-box}
-.t{white-space:pre-wrap;overflow-wrap:break-word}
+.t{white-space:pre-wrap;overflow-wrap:normal}
 .t.nw{white-space:pre}
 .g{display:block;pointer-events:none;position:absolute}
 .hot{cursor:pointer}
@@ -136,16 +136,33 @@ function indexComps(o,parent){
 function svgUrl(h){ if(!SVGURL[h]){const s=SVG[h]||'';SVGURL[h]=URL.createObjectURL(new Blob([s],{type:'image/svg+xml'}));}return SVGURL[h]; }
 function svgSize(h){ const s=SVG[h]||'';const w=/width="([\d.]+)"/.exec(s),hh=/height="([\d.]+)"/.exec(s);return [w?+w[1]:0,hh?+hh[1]:0]; }
 
+/* ---------- drop shadows inside vector graphics ----------
+   Safari draws an SVG filter at low resolution when the picture is scaled, so a
+   character with a Figma drop shadow looked pixelated. The shadow is taken out of
+   the SVG and drawn by CSS instead, which stays sharp. */
+const SHADOW={};
+function prepShadows(){
+  for(const [h,s] of Object.entries(SVG)){
+    if(h==='KEYBOARD'||(s.match(/<filter /g)||[]).length!==1||(s.match(/filter="url\(#/g)||[]).length!==1)continue;
+    const off=/<feOffset(?: dx="([-\d.]+)")?(?: dy="([-\d.]+)")?\/>/.exec(s),bl=/stdDeviation="([\d.]+)"/.exec(s),
+      a=/values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ([\d.]+) 0"/.exec(s);
+    if(!off||!bl||!a||/feMorphology|inset|innerShadow/.test(s))continue;
+    SHADOW[h]={dx:+(off[1]||0),dy:+(off[2]||0),b:+bl[1],a:+a[1]};
+    SVG[h]=s.replace(/ filter="url\(#[^)]+\)"/,'').replace(/<filter [\s\S]*?<\/filter>/,'');
+  }
+}
+function cssShadow(h,scale){const d=SHADOW[h];if(!d)return '';
+  return `drop-shadow(${d.dx*scale}px ${d.dy*scale}px ${d.b*scale}px rgba(0,0,0,${d.a}))`;}
 /* ---------- build DOM ---------- */
 let BUILD_FID=null; // frame being built (for text substitution)
 function svgImg(el,g,w,h,o){
   const img=document.createElement('img');img.className='g';img.alt='';img.src=svgUrl(g);img.draggable=false;
   const [sw,sh]=svgSize(g);
   // vectors re-used at another size (grids) fill their box: width/height 100% so they scale while animating
-  if(o&&o.fit){img.style.cssText='width:100%;height:100%;left:0;top:0';el.appendChild(img);return img;}
+  if(o&&o.fit){img.style.cssText='width:100%;height:100%;left:0;top:0';if(SHADOW[g])img.style.filter=cssShadow(g,w/(sw||w));el.appendChild(img);return img;}
   const W=sw||w,H=sh||h;
   const off=(o&&o.go)||[(w-W)/2,(h-H)/2];img.style.cssText=`width:${W}px;height:${H}px;left:${off[0]}px;top:${off[1]}px`;
-  if(o&&o.gf)img.style.filter=o.gf;
+  if(o&&o.gf)img.style.filter=o.gf; else if(SHADOW[g])img.style.filter=cssShadow(g,1);
   el.appendChild(img);return img;
 }
 function build(o,box){
@@ -257,10 +274,27 @@ function textMorph(oe,ne,dur,ease,anims){
   ns.forEach((s,i)=>{const a=os[i];if(a.style.fontSize!==s.style.fontSize||a.style.color!==s.style.color||a.style.lineHeight!==s.style.lineHeight)
     anims.push(s.animate([{fontSize:a.style.fontSize,lineHeight:a.style.lineHeight,color:a.style.color},{}],{duration:dur,easing:ease,fill:'backwards'}));});
 }
+/* ---------- tiles grow onto the screen (the "What do you bring" animation) ---------- */
+function popPlan(root){
+  // the tiles of a screen and everything that sits inside them, each with a delay: top-left first
+  const tops=kids(root),tiles=tops.filter(e=>e._n.y==='RE'&&e._box.w>=60&&e._box.h>=60&&e._box.y>=150&&e._n.n!=='home-btn');
+  const plan=new Map();const delay=b=>Math.max(0,Math.round((b.y-200)/130))*70+Math.max(0,Math.round(b.x/130))*35;
+  for(const t of tiles)plan.set(t,delay(t._box));
+  for(const e of tops){ if(plan.has(e)||e._n.n==='home-btn'||e._n.n==='Status bar')continue;const b=e._box,cx=b.x+b.w/2,cy=b.y+b.h/2;
+    const t=tiles.find(t=>{const B=t._box;return cx>=B.x&&cx<=B.x+B.w&&cy>=B.y&&cy<=B.y+B.h;});if(t)plan.set(e,plan.get(t)+40);}
+  return plan;
+}
+function popIn(e,delay,dur){
+  return e.animate([{opacity:0,transform:'scale(.4)'},{opacity:e.style.opacity||1,transform:'none'}],
+    {duration:dur*.8,delay:delay+dur*.15,easing:springEase(1,220,18,dur*.8/1000),fill:'backwards'});
+}
 function smartAnimate(oldRoot,newRoot,tr,done,inner){
   const dur=(tr&&tr.du||.3)*1000,ease=easing(tr);
   if(RM){done&&done();return;}
-  const pairs=matchTrees(oldRoot,newRoot);const matchedOld=new Set(pairs.values());const anims=[];
+  const pairs=matchTrees(oldRoot,newRoot);
+  const plan=tr&&tr.pop?popPlan(newRoot):null;
+  if(plan)for(const e of plan.keys())pairs.delete(e); // in a pop, the tiles grow in fresh; the old ones fade away
+  const matchedOld=new Set(pairs.values());const anims=[];
   const opts={duration:dur,easing:ease,fill:'backwards'};
   const fade={duration:dur,easing:'linear',fill:'both'};
   const rootPair=(np,op)=>(np===newRoot&&op===oldRoot)||pairs.get(np)===op;
@@ -276,11 +310,8 @@ function smartAnimate(oldRoot,newRoot,tr,done,inner){
   for(const ne of allNodes(newRoot)){
     const oe=pairs.get(ne);const n=ne._n;
     if(!oe){ if(underNew(ne))continue;
-      if(tr&&tr.pop&&ne.parentElement===newRoot&&ne._box.w>=60&&ne._box.h>=60){
-        // tiles pop onto the screen one after another, top-left first
-        const d=Math.round((ne._box.y-200)/130)*70+Math.round(ne._box.x/130)*35+dur*.25;
-        anims.push(ne.animate([{opacity:0,transform:'scale(.4)'},{opacity:ne.style.opacity||1,transform:'none'}],{duration:dur*.8,delay:Math.max(0,d),easing:springEase(1,220,18,dur*.8/1000),fill:'backwards'}));
-      } else anims.push(ne.animate([{opacity:0},{opacity:ne.style.opacity||1}],fade));
+      if(plan&&plan.has(ne))anims.push(popIn(ne,plan.get(ne),dur));
+      else anims.push(ne.animate([{opacity:0},{opacity:ne.style.opacity||1}],fade));
       continue; }
     const o=oe._n;
     let from={x:oe._box.x,y:oe._box.y};
@@ -340,6 +371,7 @@ function show(id,tr,isBack){
   if(APP.route)id=APP.route(id)||id;
   if(!N[id])return;
   const next=makeScreen(id);const prev=cur;token++;const tok=token;clearTimers();
+  if(tr&&prev&&APP.popFor&&APP.popFor(next._fid,prev._fid))tr={...tr,pop:true};
   const finish=()=>{ if(prev&&prev!==next)prev.remove(); next.style.transform='';next.style.overflow='';
     for(const v of next.querySelectorAll('video')){v.play().catch(()=>{});} busy=false; if(tok===token)scheduleTimeouts(next,tok); };
   cur=next;
@@ -355,6 +387,7 @@ function show(id,tr,isBack){
     const a={duration:dur,easing:ease};
     next.animate([{transform:`translate(${d[0]}px,${d[1]}px)`},{transform:'none'}],a);
     if(tr.t==='PUSH')prev.animate([{transform:'none'},{transform:`translate(${-d[0]}px,${-d[1]}px)`}],{...a,fill:'forwards'});
+    if(tr.pop){const plan=popPlan(next);for(const [e,d] of plan)popIn(e,d+dur*.3,Math.min(dur,900));}
     if(tr.ml&&tr.t==='PUSH'){
       // matched layers are counter-moved, so the screens must not clip them (the phone still does)
       next.style.overflow='visible';prev.style.overflow='visible';
@@ -378,7 +411,9 @@ function show(id,tr,isBack){
     }
     setTimeout(finish,dur);
   } else {
-    phone.appendChild(next);next.animate([{opacity:0},{opacity:1}],{duration:dur,easing:ease});setTimeout(finish,dur);
+    phone.appendChild(next);next.animate([{opacity:0},{opacity:1}],{duration:dur,easing:ease});
+    if(tr.pop){const plan=popPlan(next);for(const [e,d] of plan)popIn(e,d,900);}
+    setTimeout(finish,dur);
   }
 }
 function findInstance(el,destId){
@@ -488,6 +523,7 @@ const NAME_SET='678:22429',EMAIL_SET='678:24302',COLLEGE_SET='678:23548';
 const DEF_AVATAR='1ucs5gg2xl';
 const OWN_AV=new Set(['a0o6sp30d','1jmm4mj309','2fgqb730d','1rh33u1305']);
 const GENTLE={t:'SMART_ANIMATE',du:.8,e:'GENTLE'};
+const SOFT={t:'SMART_ANIMATE',du:.9,e:'CUSTOM_CUBIC_BEZIER',cb:{x1:.45,y1:0,x2:.15,y2:1}}; // eases in and settles, no bounce
 const PUSHF={t:'PUSH',du:1.02,e:'GENTLE',dir:'LEFT',ml:true},PUSHB={t:'PUSH',du:1.02,e:'GENTLE',dir:'RIGHT',ml:true};
 const MENU='709:26131',HOME='709:26463';
 // going home always plays the Figma "home" animation: the screen bursts outwards, your avatar grows in the
@@ -531,11 +567,11 @@ APP.subst=(t,fid)=>{
 // your avatar (the home button) follows the avatar and colour you picked
 APP.ownAvatar=(el,o)=>{
   if(!OWN_AV.has(o.g))return false;
-  const b=el._box;el.style.backgroundColor=ST.accent||'#3361ff';el.style.borderRadius='4px';el.style.overflow='hidden';
+  const b=el._box;el.style.backgroundColor=ST.accent||'#3361ff';el.style.borderRadius=radius(o.cr||4);el.style.overflow='hidden';
   const g=ST.avatar||DEF_AVATAR;const [w,h]=svgSize(g);const fh=.74,fw=fh*w/h;
   const img=document.createElement('img');img.className='g';img.alt='';img.draggable=false;img.src=svgUrl(g);
   // percentages so the avatar scales with its tile while animating
-  img.style.cssText=`height:${fh*100}%;width:${Math.min(fw,0.84)*100}%;left:${(1-Math.min(fw,.84))*50}%;top:${(1-fh)*50}%;object-fit:contain`;el.appendChild(img);return true;
+  img.style.cssText=`height:${fh*100}%;width:${Math.min(fw,0.84)*100}%;left:${(1-Math.min(fw,.84))*50}%;top:${(1-fh)*50}%;object-fit:contain`;if(SHADOW[g])img.style.filter=cssShadow(g,fh*b.h/h);el.appendChild(img);return true;
 };
 
 /* ---------- prep the Figma data once ---------- */
@@ -574,6 +610,26 @@ function prep(){
   N['790:38916'].r[0].a[0].tr={t:'SMART_ANIMATE',du:.9,e:'GENTLE',pop:true};
   {const l=N['790:38964'].k.find(c=>c.n==='next label');if(l)tx(l,'My skills');}
   prepYear();
+  // home button: corners 4, and 20 while it is big in the middle of the "going home" burst
+  (function w(o){for(const c of o.k||[]){ if(c.n==='home-btn')c.cr=c.cr||4; w(c);} })({k:Object.values(N)});
+  for(const c of N[HOME].k)if(c.n==='home-btn')c.cr=20;
+  // "Let's start pitching": the home tiles fade away instead of flying off
+  for(const c of N[MENU].k)for(const r of c.r||[])for(const a of r.a)if(a.d==='709:29362')a.tr={t:'DISSOLVE',du:.5,e:'EASE_OUT'};
+  // "What do you study": the tiles settle softly (no spring bounce)
+  N['709:29129'].r[0].a[0].tr={...SOFT};
+  // "First, Create Your Profile": the same progress bar as the next screen (7 parts, not 8)
+  {const f=N['709:28907'],g=clone(N['709:28921'].k.find(c=>c.n==='Group 10'));
+   for(const k of g.k){k.f=[{t:'S',c:'#c8c8c8',o:1}];k.Y=8;k.h=4;k.cr=k.cr||2;}
+   const at=f.k.findIndex(c=>/^step/.test(c.n));f.k=f.k.filter(c=>!/^step/.test(c.n));f.k.splice(at,0,g);}
+  // buttons (✓, +, −) are always squares: 50 × 50; the field before them grows to keep the gaps equal
+  squareButtons();
+  // profiles: the avatar sits in its box with the proportions of the big avatar tile
+  for(const id of ['709:27085','709:27123','709:27161','732:32113','732:32152','732:32231','732:32270','732:32309']){
+    const f=N[id];const av=f.k.find(c=>c.g&&c.n!=='home-btn'&&c.n!=='Status bar'&&c.Y>200&&c.Y<520);if(!av)continue;
+    const cx=av.x+av.w/2,cy=av.Y+av.h/2;
+    const box=f.k.filter(c=>c.y==='RE'&&c.x<=cx&&c.x+c.w>=cx&&c.Y<=cy&&c.Y+c.h>=cy).sort((a,b)=>a.w*a.h-b.w*b.h)[0];
+    if(box)fitAvatar(av,box);
+  }
   // timings: the big "Choose Your Color" title hands over after 400ms; the two home-button intros stay 200ms longer
   N['709:28883'].r[0].d=0.4; N['709:26437'].r[0].d+=0.2; N['709:26450'].r[0].d+=0.2;
   // 709:28934 moves forward with a "push right" in Figma (Figma fires it on any drag): a swipe left goes forward, right goes back
@@ -710,7 +766,7 @@ function profileFrame(it,backId){
     if(c.n==='home-btn')c.r=menuTap;
   }
   const box=f.k.find(k=>k.n==='Rectangle 46'),av=f.k.find(k=>k.n==='Group 2'&&k.g);
-  if(box&&av&&it.char){const s=box.w/117;av.g=it.char.g;av.fit=1;av.w=it.char.w*s;av.h=it.char.h*s;av.x=box.x+(box.w-av.w)/2;av.Y=box.Y+(box.h-av.h)/2;}
+  if(box&&av&&it.char){av.g=it.char.g;fitAvatar(av,box);}
   return addFrame('709:27085',f);
 }
 
@@ -750,6 +806,11 @@ R(['709:26571','709:26699','709:26827','709:26956'],()=>gridFrame(grid('dept','7
 R(['732:31857','732:31985'],()=>gridFrame(grid('port','732:31857','people',attachPeople)));
 ROUTE['709:28996']=()=>'901:16128';  // "Fill Your Details": email + portfolio + Instagram
 APP.route=id=>ROUTE[id]?ROUTE[id]():id;
+// screens whose tiles grow in when you arrive (not when you move inside the same screen)
+const POP_FAMILY={'709:28652':'color','709:27721':'avatar','709:26102':'crew','709:26483':'crew','732:31857':'port',
+  '709:26284':'me','709:26312':'me','709:26340':'me','709:26368':'me','709:26396':'me','709:26157':'cur','739:35653':'cur'};
+APP.popFor=(nextId,prevId)=>{const a=POP_FAMILY[baseOf(nextId)],b=POP_FAMILY[baseOf(prevId)];
+  if(!a||a===b)return false; if(baseOf(prevId)==='709:27226')return false; return true;};
 /* ---------- swipe back through the onboarding ----------
    Every onboarding screen goes back one step with a swipe to the right
    (finger moving left → right). Screens that only play on a timer
@@ -782,7 +843,7 @@ function prepRoutes(){
 }
 
 APP.action=(el,a)=>{
-  if(a.f==='study'){ if(ST.dept===a.d)return; ST.dept=a.d; show(studyFrame(a.d),{t:'SMART_ANIMATE',du:1.02,e:'GENTLE'}); }
+  if(a.f==='study'){ if(ST.dept===a.d)return; ST.dept=a.d; show(studyFrame(a.d),SOFT); }
   else if(a.f==='grid'){ const G=ST.grids[a.g],it=G.items[a.id];
     if(G.kind==='people'&&G.sel===a.id&&it.person){ show(profileFrame(it,cur._fid),GENTLE); return; }
     if(G.sel===a.id)return;
@@ -794,6 +855,20 @@ APP.action=(el,a)=>{
 };
 
 
+function fitAvatar(av,box){ // like the big avatar tile: about 80% of the box height, centred
+  const [w0,h0]=svgSize(av.g);if(!w0||!h0)return;const s=Math.min(box.h*.8/h0,box.w*.78/w0);
+  av.fit=1;av.w=w0*s;av.h=h0*s;av.x=box.x+(box.w-av.w)/2;av.Y=box.Y+(box.h-av.h)/2;
+}
+function squareButtons(){
+  const fix=(vid,btnN,prevN)=>{const v=COMP[vid];if(!v)return;const b=v.k.find(c=>c.n===btnN),p=v.k.find(c=>c.n===prevN);if(!b||!p)return;
+    if(Math.abs(b.w-b.h)<1||b.h!==50)return;const d=b.w-50;b.w=50;b.x+=d;if(p.x+p.w<=b.x)p.w+=d;
+    for(const c of v.k)if(/^icon-/.test(c.n)&&c.x>=b.x-d-1)c.x+=d/2;};
+  for(const [set,prev] of [[NAME_SET,'pill-last'],[EMAIL_SET,'pill-email'],['868:3416','pill'],['868:3948','pill']])
+    for(const k of Object.keys(COMP))if(SETOF[k]===set&&COMP[k].vp&&['Empty','Edit','Typed'].includes(COMP[k].vp.State))fix(k,'pill-btn',prev);
+  // budget − / +: 50 × 50
+  const f=N['861:15423'];const ar=f.k.filter(c=>c.n==='area').sort((a,b)=>a.x-b.x);
+  if(ar.length===3){ar[0].w=50;ar[2].w=50;}
+}
 /* ---------- Current Year: a second picker under "Your college" ----------
    Built from the Figma "College field" component (same pills, type, pen and
    motion) with the options 1st · 2nd · 3rd · 4th. */
@@ -804,7 +879,7 @@ function prepYear(){
   const fs=txt.sg[0][4],tw=t=>Math.ceil(textW(t,fs,700))+1,TR={t:'SMART_ANIMATE',du:.6,e:'GENTLE'};
   const open=[{t:'ON_CLICK',a:[{n:'CHANGE_TO',d:'Y:Open',tr:TR}]}];
   const mk=(state,fn)=>{const v={n:'State='+state,i:'Y:'+state,y:'CO',vp:{State:state},x:0,Y:0,w:275,h:50,k:[]};
-    YEARS.forEach((y,i)=>{const p=clone(pill),t=clone(txt);p.n='pill-y'+i;t.n='txt-y'+i;tx(t,y);t.w=tw(y);delete p.r;delete t.r;v.k.push(p);});
+    YEARS.forEach((y,i)=>{const p=clone(pill),t=clone(txt);p.cr=4;p.n='pill-y'+i;t.n='txt-y'+i;tx(t,y);t.w=tw(y);delete p.r;delete t.r;v.k.push(p);});
     YEARS.forEach((y,i)=>{const t=clone(txt);t.n='txt-y'+i;tx(t,y);t.w=tw(y);delete t.r;v.k.push(t);});
     const P=clone(ph);tx(P,'Current Year');P.w=tw('Current Year');v.k.push(P);v.k.push(clone(pen));fn(v);
     COMP[v.i]=v;SETOF[v.i]=YEAR_SET;return v;};
@@ -1205,7 +1280,7 @@ function scanFrames(){
     const keep=f.k.filter(c=>c.n==='Status bar'||(c.y==='TE'&&/^Scanning/.test(c.ch||'')));
     const gen=[],top=[];
     steps[k].forEach((t,i)=>{
-      const ni=names.indexOf(t.n),col=SCAN_PAL[(ni*7+k*5)%SCAN_PAL.length];
+      const ni=names.indexOf(t.n),col=SCAN_PAL[(ni*5+k*11)%SCAN_PAL.length];
       gen.push({n:t.n,y:'RE',fixc:1,x:t.x,Y:t.Y,w:t.w,h:t.h,cr:t.cr,f:[{t:'S',c:col,o:1}]});
       const g=chars[(ni+k*3)%chars.length],[cw,ch]=svgSize(g),sc=Math.min(.62*t.w/cw,.7*t.h/ch);
       const w=cw*sc,h=ch*sc;top.push({n:'face-'+t.n,y:'GR',g,fit:1,x:t.x+(t.w-w)/2,Y:t.Y+(t.h-h)/2,w,h});
@@ -1227,7 +1302,12 @@ function prepProject(){
   N[FR_BRING].r=[SW(FR_BUDGET0),{t:'ON_DRAG',a:[{n:'NAVIGATE',d:'790:38782',tr:{...PUSHB}}]}];
   // budget: opens when you tap it (no auto-advance)
   const b0=N[FR_BUDGET0];b0.r=[{t:'ON_DRAG',a:[{n:'NAVIGATE',d:FR_BRING,tr:{...PUSHB}}]}];
-  for(const c of b0.k)if(['area','placeholder','akar-icons:plus'].includes(c.n))c.r=[{t:'ON_CLICK',a:[{n:'APP',f:'budgetOpen'}]}];
+  // the + gets its own square button next to the field
+  {const ar=b0.k.find(c=>c.n==='area'),ph=b0.k.find(c=>c.n==='placeholder'),pl=b0.k.find(c=>c.n==='akar-icons:plus');
+   if(ar&&ph&&pl&&!b0.k.some(c=>c.n==='btn')){ar.w=Math.round(ph.x-ar.x)*2+ph.w;
+     const btn={n:'btn',y:'RE',x:ar.x+ar.w+12,Y:ar.Y,w:50,h:50,cr:ar.cr||4,f:clone(ar.f)};pl.x=btn.x+16;pl.Y=btn.Y+16;
+     b0.k.splice(b0.k.indexOf(pl),0,btn);}}
+  for(const c of b0.k)if(['area','placeholder','akar-icons:plus','btn'].includes(c.n))c.r=[{t:'ON_CLICK',a:[{n:'APP',f:'budgetOpen'}]}];
   N[FR_BUDGET].r=[SW(FR_DUE),{t:'ON_DRAG',a:[{n:'NAVIGATE',d:FR_BRING,tr:{...PUSHB}}]}];
   N[FR_DUE].r=[SW('709:27226'),{t:'ON_DRAG',a:[{n:'NAVIGATE',d:FR_BUDGET,tr:{...PUSHB}}]}];
   // swipe back works through the whole pitch too
@@ -1316,7 +1396,7 @@ APP.onChange=(ne,dest)=>{ _oc(ne,dest); const st=COMP[dest]&&COMP[dest].vp&&COMP
 </script>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v15';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v16';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
@@ -1333,7 +1413,7 @@ window.__lorem={show:id=>{if(cur){cur.remove();cur=null;}busy=false;clearTimers(
 (async()=>{
   try{
     const [n,s]=await Promise.all([fetch('nodes.json').then(r=>r.json()),fetch('svg.json').then(r=>r.json())]);
-    N=n;SVG=s;for(const o of Object.values(N))indexComps(o,null);
+    N=n;SVG=s;prepShadows();for(const o of Object.values(N))indexComps(o,null);
     prep();prepRoutes();prepOnboarding();prepProject();
     fetch('splash.mp4').then(r=>{if(!r.ok)throw 0;return r.blob();}).then(b=>{VIDEO=URL.createObjectURL(b);}).catch(()=>{VIDEO=null;});
     fetch('poster.png').then(r=>{if(!r.ok)throw 0;return r.blob();}).then(b=>{POSTER=URL.createObjectURL(b);}).catch(()=>{});
