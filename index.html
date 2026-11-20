@@ -2429,8 +2429,8 @@ function searchPick(q){
   const people=all.filter(r=>r.type==='person'),things=all.filter(r=>r.type!=='person');
   // not enough matches: keep the bento full with the closest people and things (first letter first)
   const c=q.trim().toLowerCase()[0]||'';const near=(r)=>r.title.toLowerCase().startsWith(c)?0:1;
-  for(const r of idx.filter(r=>r.type==='person'&&!people.includes(r)).sort((a,b)=>near(a)-near(b)))if(people.length<4)people.push(r);
-  for(const r of idx.filter(r=>r.type!=='person'&&r.type!=='year'&&!things.includes(r)).sort((a,b)=>near(a)-near(b)))if(things.length<4)things.push(r);
+  for(const r of idx.filter(r=>r.type==='person'&&!people.some(x=>x.title===r.title)).sort((a,b)=>near(a)-near(b)))if(people.length<4)people.push(r);
+  for(const r of idx.filter(r=>r.type!=='person'&&r.type!=='year'&&!things.some(x=>x.title===r.title)).sort((a,b)=>near(a)-near(b)))if(things.length<4)things.push(r);
   return {people:people.slice(0,4),things:things.slice(0,4)};
 }
 // the screen: big title + short field, or (while you search) the small title + wide field
@@ -3115,14 +3115,18 @@ function lgFields(s){
     d.append(t,p,c,pen);d.addEventListener('pointerdown',stop);
     d.addEventListener('pointerup',e=>{stop(e);LG.focus=key;lgRender();});box.appendChild(d);return d;};
   mk('u',364,'Username');mk('p',429,'Password');
-  const err=document.createElement('div');err.className='lg-err';err.style.cssText=`position:absolute;left:27px;top:${login?553:494}px;width:348px;font:700 14px/18px ${HN};color:#ec5256`;box.appendChild(err);
+  const err=document.createElement('div');err.className='lg-err';err.style.cssText=`position:absolute;left:27px;top:494px;width:348px;font:700 14px/18px ${HN};color:#ec5256`;box.appendChild(err);
   if(login){
-    const b=document.createElement('div');b.className='lg-btn';b.textContent='Log In';
-    b.style.cssText=`position:absolute;left:27px;top:494px;width:117px;height:39px;border-radius:4px;background:#242424;color:#fff;font:700 16px/39px ${HN};text-align:center;pointer-events:auto;cursor:pointer`;
-    b.addEventListener('pointerdown',stop);b.addEventListener('pointerup',e=>{stop(e);lgSubmit('login');});box.appendChild(b);
-    const nw=document.createElement('div');nw.className='lg-btn';nw.textContent='New here? Create a profile';
-    nw.style.cssText=`position:absolute;left:27px;top:800px;font:700 16px/22px ${HN};color:#aeaeb2;pointer-events:auto;cursor:pointer`;
-    nw.addEventListener('pointerdown',stop);nw.addEventListener('pointerup',e=>{stop(e);LG.u='';LG.p='';LG.err='';LG.focus=null;if(NK)NK.blur();ST.newSignup=true;show('709:28896',GENTLE);});box.appendChild(nw);
+    // the ✓ square appears next to the password once both are filled (like every field in the app)
+    const ok=document.createElement('div');ok.className='lg-btn lg-ok';
+    ok.style.cssText=`position:absolute;top:429px;width:50px;height:50px;border-radius:4px;background:#f2f2f7;pointer-events:auto;cursor:pointer;display:none;transition:left .25s cubic-bezier(.2,.8,.2,1)`;
+    ok.innerHTML='<svg width="18" height="14" viewBox="0 0 18 14" style="position:absolute;left:16px;top:18px"><path d="M1.5 7.5 6.5 12.5 16.5 1.5" fill="none" stroke="#242424" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    ok.addEventListener('pointerdown',stop);ok.addEventListener('pointerup',e=>{stop(e);lgSubmit('login');});box.appendChild(ok);
+    // Figma: "New here? Sign up", centred at the bottom → the onboarding goes on to "Every Project Starts as Lorem Ipsum."
+    const nw=document.createElement('div');nw.className='lg-btn';nw.textContent='New here? Sign up';
+    nw.style.cssText=`position:absolute;left:0;top:817px;width:402px;text-align:center;font:700 16px/26px ${HN};color:#c8c8c8;pointer-events:auto;cursor:pointer`;
+    nw.addEventListener('pointerdown',stop);nw.addEventListener('pointerup',e=>{stop(e);LG.u='';LG.p='';LG.err='';LG.focus=null;if(NK&&document.activeElement===NK)NK.blur();ST.newSignup=true;
+      show('709:28901',{t:'SMART_ANIMATE',du:1.0220937728881836,e:'GENTLE'});});box.appendChild(nw);
   }
   s.appendChild(box);
   if(login&&!LG.u)LG.u=LS.get('lorem.last','')||'';
@@ -3137,6 +3141,8 @@ function lgRender(s0){const s=s0||lgScreen();if(!s)return;const box=s.querySelec
     const w=Math.min(348,Math.ceil(16+tw+12+18+16));d.style.width=w+'px';pen.style.left=(w-34)+'px';
     const room=w-16-12-18-16;t.style.left=(16+Math.min(0,room-vw))+'px';
     const on=LG.focus===k;c.style.display=on?'block':'none';c.style.left=(16+Math.min(room,vw)+(v?2:0))+'px';}
+  const ok=box.querySelector('.lg-ok'),pf=box.querySelector('.lg-f[data-k="p"]');
+  if(ok&&pf){ok.style.display=LG.u&&LG.p?'block':'none';ok.style.left=(27+parseFloat(pf.style.width)+12)+'px';}
   const e=box.querySelector('.lg-err');if(e)e.textContent=LG.err||'';}
 function lgShake(){const s=lgScreen();if(!s||RM)return;for(const d of s.querySelectorAll('.lg-f'))d.animate([{transform:'none'},{transform:'translateX(-7px)'},{transform:'translateX(6px)'},{transform:'translateX(-3px)'},{transform:'none'}],{duration:340,easing:'ease-out'});}
 function lgKey(k){
@@ -3171,7 +3177,8 @@ async function lgSubmit(mode){
 // after the splash: if this phone knows you, it asks for your username and password
 ROUTE[LOGIN_ID]=()=>{const f=clone(N['709:28946']);f.k=f.k.filter(c=>c.n==='Status bar'||/^Ready/.test(c.n));f.r=[];
   const id=addFrame(LOGIN_ID,f);N[id].login=1;return id;};
-ROUTE['709:28896']=()=>(!ST.user&&!ST.newSignup&&hasAccounts())?ROUTE[LOGIN_ID]():'709:28896';
+ROUTE['709:28896']=()=>{const f=clone(N['709:28896']);f.k=f.k.filter(c=>c.n!=='Skip'&&c.n!=='skip-hit');f.r=[];
+  const id=addFrame('709:28896',f);N[id].login=1;return id;};
 // "Ready? Let's Go": the account is made here; swipe left to go on
 ROUTE['709:28946']=()=>{const f=clone(N['709:28946']);f.k=f.k.filter(c=>c.n!=='Skip');
   f.r=(N['709:28946'].r||[]).filter(r=>r.a.some(a=>a.tr&&a.tr.dir==='RIGHT')).concat([{t:'ON_DRAG',a:[{n:'APP',f:'signup',tr:{dir:'LEFT'}}]}]);
@@ -3245,8 +3252,8 @@ const _cs19=chatSend;chatSend=function(){
     else{m.t+=' (not sent)';delete m.pending;if(chatScreen()&&ST.chatId===id)chatRefresh(false);} });
 };
 const _si19=searchIndex;searchIndex=function(){ const out=_si19();
-  const add=Object.values(REAL).map(it=>{const D=it.person;return {type:'person',title:D.name,sub:`${D.dept} · ${D.year} · ${D.college}`,color:D.color,g:D.g,
-    tags:[D.user,D.dept,D.college,D.year+' year',...D.skills,D.about].join(' '),it};});
+  const add=Object.values(REAL).map(it=>{const D=it.person;return it._sr=Object.assign(it._sr||{},{type:'person',title:D.name,sub:`${D.dept} · ${D.year} · ${D.college}`,color:D.color,g:D.g,
+    tags:[D.user,D.dept,D.college,D.year+' year',...D.skills,D.about].join(' '),it});});
   return add.concat(out); };
 
 /* ---------- text on colour: white on dark colours, a deep shade of the same colour on light ones ---------- */
@@ -3279,6 +3286,16 @@ const _act19=APP.action;APP.action=(el,a)=>{
   _act19(el,a);
 };
 
+/* ---------- other people's words stay theirs ----------
+   The old prototype swapped "Noa Henkin" (and any email) for YOUR details in every text.
+   In chats, on other people's profiles and in search that must never happen. */
+const _subst19=APP.subst;
+APP.subst=(t,fid)=>['C:chat','PR:prof','C:chats','709:26157'].includes(fid)?t:_subst19(t,fid);
+/* ---------- search: a space between words ---------- */
+const _tk19b=typeKey;
+typeKey=function(k){ const f=liveField();
+  if(f&&SETOF[f._inst.cur]===SEARCH_SET&&k==='space'){const q=ST.q||'';if(q&&!q.endsWith(' ')){ST.q=q+' ';if(stateOf(f)==='Empty'){changeTo(f,varId(SEARCH_SET,'Typed'),TAP);return true;}bindField(f);}return true;}
+  return _tk19b(k); };
 function prepPart19(){
   const _rs=resetState;resetState=function(){_rs();ST.user=null;ST.token=null;ST.newSignup=false;stopSync();SAVED='';};
   // back arrows: 3px bigger, the tip still on the grid line (x 13)
@@ -3295,7 +3312,7 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v38';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v40';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
