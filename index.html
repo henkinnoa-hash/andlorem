@@ -1,21 +1,5 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="&amp;Lorem">
-<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#242424" media="(prefers-color-scheme: dark)">
-<meta name="color-scheme" content="light dark">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icon.png">
-<link rel="icon" href="icon.png">
-</head>
-<body>
 <title>&amp;Lorem</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <style>
 /* Layout: one phone (402×874 Figma frame) centred on a quiet ground, scaled to fit. */
 :root{
@@ -554,7 +538,7 @@ APP.mapText=(hex,size)=>{ if(!ST.accent)return hex;const h=hex.toLowerCase();
   return hex; };
 
 /* ---------- your details flow into the app ---------- */
-const DEPT_FR=new Set(['709:26571','709:26699','709:26827','709:26956','709:26483','709:26368','871:6640','861:15169','871:6076']);
+const DEPT_FR=new Set(['709:26368','871:6640','861:15169','871:6076']);
 const COL_FR=new Set(['709:26368','709:29331','871:6640','861:15169','871:6076']);
 const YEAR_FR=new Set(['709:29331','709:26368','871:6640','861:15169','871:6076']);
 const EMAIL_RE=/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
@@ -1509,10 +1493,11 @@ function personalize(f,D,ids){
       if(D.me&&a.d==='709:29331'){a.d=SETTINGS_ID;a.tr={...GENTLE};}
     }
   }
-  if(!D.me&&D.g){ // their avatar lives in the Info tile
-    const box=f.k.find(c=>c.n==='Rectangle 38');
-    if(box){const [w0,h0]=svgSize(D.g);const s=Math.min(box.h*.55/h0,box.w*.5/w0);const w=w0*s,h=h0*s;
-      f.k.splice(f.k.indexOf(box)+1,0,{n:'p-avatar',y:'GR',g:D.g,fit:1,x:box.x+box.w-w-12,Y:box.Y+box.h-h-10,w,h});}
+  if(!D.me){ // their avatar gets a tile of its own, picture only (like Karin's), in place of "Portfolio" (the links live in Info)
+    const g=D.g||(()=>{const cs=scanChars();return cs[hashStr(D.name)%cs.length];})();D.g=g;
+    const box=f.k.find(c=>c.n==='Rectangle 30');const lab=f.k.find(c=>c.y==='TE'&&/^Portfolio/.test(c.ch||''));
+    if(lab)f.k.splice(f.k.indexOf(lab),1);
+    if(box&&g){const av={n:'p-avatar',y:'GR',g,fit:1};fitAvatar(av,box);f.k.splice(f.k.indexOf(box)+1,0,av);}
   }
 }
 function profileFamily(D){
@@ -1671,7 +1656,7 @@ APP.click=el=>{
 const _oc4=APP.onChange;
 APP.onChange=(ne,dest)=>{ _oc4(ne,dest);
   // a chip keeps its department label when it switches on / off
-  if(ne._inst&&ne._inst.orig&&ne._inst.orig.lab){const l=[...ne.children].find(c=>c._n&&c._n.n==='label');if(l){const sp=l.querySelector('span');if(sp)sp.textContent=ne._inst.orig.lab;[...l.querySelectorAll('span')].slice(1).forEach(x=>x.textContent='');}}
+  if(ne._inst&&ne._inst.orig&&ne._inst.orig.lab){const l=[...ne.children].find(c=>c._n&&c._n.n==='label');if(l){l.classList.toggle('nw',!/\s/.test(ne._inst.orig.lab));const sp=l.querySelector('span');if(sp)sp.textContent=ne._inst.orig.lab;[...l.querySelectorAll('span')].slice(1).forEach(x=>x.textContent='');}}
   // the skills you chose in "What do you bring" go to your profile
   if(cur&&baseOf(cur._fid)==='709:29101'&&isChipSet(SETOF[dest]))setTimeout(()=>{ST.skills=[...cur.querySelectorAll('.n')].filter(e=>e._inst&&e.style.pointerEvents!=='none'&&isOn(e)).map(e=>e._inst.orig.lab||e._n.n.replace(/^Skill · /,''));},0);
 };
@@ -1685,7 +1670,10 @@ APP.onChange=(ne,dest)=>{ _oc4(ne,dest);
 const SCAN_FIG=['709:27226','709:27346','709:27465','709:27593'];
 scanFrames=function(){
   const res=N['709:26102'],RES=res.k.filter(c=>c.y==='RE'&&/^Rectangle/.test(c.n));
-  const tilesOf=id=>N[id].k.filter(c=>(c.y==='RE'||c.n==='Group 1')&&c.x>=0&&c.x<402&&c.Y>340&&c.Y<874).map(c=>({n:c.n,x:c.x,Y:c.Y,w:c.w,h:c.h}));
+  // "Group 5" holds a tile too (its bounding box also wraps a face, so use the tile itself)
+  const G5={'709:27226':[13,559,91,91],'709:27346':[13,494,104,117],'709:27465':[13,585,104,91],'709:27593':[13,585,104,130]};
+  const tilesOf=id=>{const t=N[id].k.filter(c=>(c.y==='RE'||c.n==='Group 1')&&c.x>=0&&c.x<402&&c.Y>340&&c.Y<874).map(c=>({n:c.n,x:c.x,Y:c.Y,w:c.w,h:c.h}));
+    const g=G5[id];if(g)t.push({n:'Group 5',x:g[0],Y:g[1],w:g[2],h:g[3]});return t;};
   const steps=SCAN_FIG.map(tilesOf);
   // the last Figma shuffle hands each tile to its nearest "Mission crew" tile, so it glides into the results
   const cen=(t,y0,h)=>({x:(t.x+t.w/2-13)/377,y:(t.Y+t.h/2-y0)/h});const last=steps[3];const rename={};const used=new Set();
@@ -1794,7 +1782,7 @@ const CHATS=[
     {in:'Sure, ping me whenever.',opts:[['Will do.','back']],end:1},
   ]},
 ];
-function chatPerson(c){ if(c.name)return c;const p=PEOPLE[c.color.slice(1)];const it={color:c.color,person:{name:p[0],year:p[1],college:p[2],dept:p[3],skill:p[4],credits:p[5]}};
+function chatPerson(c){ if(c.name)return c;if(c.it){const D=personData(c.it);return Object.assign(c,{name:D.name,first:D.first,g:D.g||(c.it.char&&c.it.char.g)});}const p=PEOPLE[c.color.slice(1)];const it={color:c.color,person:{name:p[0],year:p[1],college:p[2],dept:p[3],skill:p[4],credits:p[5]}};
   const g=ST.grids.dept&&Object.values(ST.grids.dept.items).find(x=>x.color&&x.color.toLowerCase()===c.color);const D=personData(g||it);
   return Object.assign(c,{name:D.name,first:D.first,g:D.g||(g&&g.char&&g.char.g),it:g||it});}
 ST.chat=ST.chat||{};
@@ -1826,7 +1814,7 @@ const lineH=(t,w,size)=>{MEASURE=MEASURE||document.createElement('canvas').getCo
   let lines=1,cur='';for(const word of t.split(' ')){const tryL=cur?cur+' '+word:word;if(MEASURE.measureText(tryL).width>w&&cur){lines++;cur=word;}else cur=tryL;}return lines;};
 function chatFrame(id){
   const c=chatPerson(CHATS.find(z=>z.id===id));const s=chatState(id);s.read=1;const A=accent(),T=tintOf(A),I=ink(A),pc=c.color||A;
-  const pT=tintOf(pc),pI=ink(pc),meFg=lum(A)>.55?mix(A,'#000000',.62):'#ffffff';
+  const pT=tintOf(pc),pI=ink(pc),meFg=lum(A)>.55?mix(A,'#000000',.62):'#ffffff',pFg=lum(pc)>.55?mix(pc,'#000000',.62):'#ffffff';
   const f=clone(N['709:26284']);const keep=f.k.filter(c2=>c2.n==='Status bar'||/^My Profile/.test(c2.ch||''));
   const title=keep.find(c2=>/^My Profile/.test(c2.ch||''));
   if(title){const a=(c.first?'Chat with':'Crew of')+'\n',b=c.first||c.sub;title.ch=a+b;title.sg=[[0,a.length,...title.sg[0].slice(2)],[a.length,title.ch.length,...title.sg[1].slice(2)]];title.sg[1][5]=c.color?ink(c.color):I;title.w=300;}
@@ -1837,10 +1825,10 @@ function chatFrame(id){
   for(let i=list.length-1;i>=0;i--){const m=list[i];const w=Math.min(300,Math.max(90,Math.ceil(textW(m.t,15,400))+30));
     const tw=w-26,h=Math.max(46,lineH(m.t,tw,15)*20+24);if(y-h<top+40&&items.length>=1){break;}y-=h;items.unshift({m,i,x:m.from==='me'?390-w:13,y,w,h});y-=gap;}
   const folded=list.length-items.length;
-  for(let i=0;i<Math.min(folded,12);i++){const m=list[i];k.push({n:'msg-'+i,y:'RE',x:m.from==='me'?250:13,Y:top+i*9,w:140,h:5,cr:2.5,f:[{t:'S',c:m.from==='me'?A:pT,o:1}],fixc:1});}
+  for(let i=0;i<Math.min(folded,12);i++){const m=list[i];k.push({n:'msg-'+i,y:'RE',x:m.from==='me'?250:13,Y:top+i*9,w:140,h:5,cr:2.5,f:[{t:'S',c:m.from==='me'?A:pc,o:1}],fixc:1});}
   for(const it of items){const m=it.m,me=m.from==='me';
-    k.push({n:'msg-'+it.i,y:'RE',x:it.x,Y:it.y,w:it.w,h:it.h,cr:4,f:[{t:'S',c:me?A:pT,o:1}],fixc:1});
-    const t=lbl('msg-'+it.i+'-t',it.x+13,it.y+12,it.w-26,m.t,me?meFg:pI,15,'Regular');t.h=it.h-20;t.sg[0][7]='%133';if(m.typing){t.sg[0][3]='Bold';}k.push(t);}
+    k.push({n:'msg-'+it.i,y:'RE',x:it.x,Y:it.y,w:it.w,h:it.h,cr:4,f:[{t:'S',c:me?A:pc,o:1}],fixc:1});
+    const t=lbl('msg-'+it.i+'-t',it.x+13,it.y+12,it.w-26,m.t,me?meFg:pFg,15,'Regular');t.h=it.h-20;t.sg[0][7]='%133';if(m.typing){t.sg[0][3]='Bold';}k.push(t);}
   // the answers you can give
   const step=c.script[s.step];
   if(!s.typing&&step){const opts=step.opts;const n=opts.length,H=Math.floor((858-663-13*(n-1))/n);
@@ -1850,7 +1838,7 @@ function chatFrame(id){
   }
   k.push({n:'home-btn',y:'GR',g:'a0o6sp30d',x:325,Y:100,w:65,h:65,cr:4,r:HOME_TAP()});
   const si=keep.findIndex(c2=>c2.n==='Status bar');f.k=[...keep.slice(0,si),...k,...keep.slice(si)];
-  f.r=[{t:'ON_DRAG',a:[{n:'NAVIGATE',d:'C:list',tr:{...PUSHB}}]}];
+  f.r=[{t:'ON_DRAG',a:[{n:'NAVIGATE',d:ST.chatBack||'C:list',tr:{...PUSHB}}]}];
   return addFrame('C:chat',f);
 }
 ROUTE['C:list']=chatsFrame;N['C:list']={i:'C:list',y:'FR',n:'chats',k:[],w:402,h:874,x:0,Y:0};
@@ -1858,7 +1846,7 @@ POP_FAMILY['C:list']='chats';
 function chatReply(id,i){
   const c=CHATS.find(z=>z.id===id),s=chatState(id),step=c.script[s.step];if(!step||s.typing)return;
   const [t,to]=step.opts[i];
-  if(to==='back'){show('C:list',{t:'SMART_ANIMATE',du:.6,e:'GENTLE'});return;}
+  if(to==='back'){show(ST.chatBack||'C:list',{t:'SMART_ANIMATE',du:.6,e:'GENTLE'});return;}
   if(to==='project'){show('709:26483',{...GENTLE});return;}
   if(to==='profile'){const p=chatPerson(c);show(profileFrame(p.it,cur._fid),GENTLE);return;}
   s.log.push({from:'me',t});s.typing=true;const SA={t:'SMART_ANIMATE',du:.55,e:'CUSTOM_CUBIC_BEZIER',cb:{x1:.3,y1:0,x2:.1,y2:1}};
@@ -1883,7 +1871,7 @@ const _act5=APP.action;
 APP.action=(el,a)=>{
   if(a.f==='edit'){ST.editFrom=a.from;show(a.d,{...GENTLE});return;}
   if(a.f==='count'){ST[a.k]=Math.max(0,(ST[a.k]||0)+a.d);show(settingsFrame(),{t:'SMART_ANIMATE',du:.3,e:'EASE_OUT'});return;}
-  if(a.f==='chat'){show(chatFrame(a.id),{...GENTLE});return;}
+  if(a.f==='chat'){ST.chatBack=null;show(chatFrame(a.id),{...GENTLE});return;}
   if(a.f==='reply'){chatReply(a.id,a.i);return;}
   _act5(el,a);
 };
@@ -1903,6 +1891,148 @@ function applyDark(){ document.documentElement.classList.toggle('app-dark',DARK)
 applyDark();
 DARKQ.addEventListener('change',e=>{DARK=e.matches;applyDark();if(cur&&!busy){const id=cur._fid;show(id);}});
 </script>
+<script>
+/* ======================================================================
+   Part 6 — a chat with anyone, avatar tiles, settings that open like the
+   profile, Textile & Coding crews.
+   ====================================================================== */
+
+/* ---------- chats: "Message …" opens a chat with that person ---------- */
+function chatScript(D){
+  const me=meData(),mine=me.skills[0]||'branding',p=D.projects[0]||'a new project';
+  return [
+    {in:`Hi! I'm ${D.first}, ${D.year} year ${D.dept} at ${D.college}. Saw your profile 👋`,opts:[['I\'d love to join your project.',1],['Want to work together?',2],['Just saying hi!',3]]},
+    {in:`Amazing! I'm on "${p}" and we need someone for ${mine}.`,opts:[['I\'m in!',4],['What\'s the timeline?',5]]},
+    {in:`Yes! I bring ${D.skills[0]} and ${D.skills[1]||D.skills[0]}. What do you have in mind?`,opts:[['Something with a strong concept.',1],['Let\'s talk on Thursday.',4]]},
+    {in:`Hi back! Ping me if a project needs ${D.skills[0]}.`,opts:[['Will do, thanks!','back']],end:1},
+    {in:'Great, I\'m adding you to the crew. Talk soon ✦',opts:[['See you!','back'],[`Open ${D.first}'s profile`,'profile']],end:1},
+    {in:'About 3 weeks, and it counts as 1 credit.',opts:[['Sounds good, I\'m in.',4]]},
+  ];
+}
+function chatFor(it){
+  const col=('#'+it.color.slice(1)).toLowerCase(),P=it.person;
+  let c=CHATS.find(x=>x.it&&x.it.person&&x.it.person.name===P.name);if(c)return c;
+  c=CHATS.find(x=>!x.it&&x.color&&x.color.toLowerCase()===col&&PEOPLE[col.slice(1)]&&PEOPLE[col.slice(1)][0]===P.name);if(c)return c;
+  const D=personData(it);c={id:'p'+hashStr(P.name),color:col,it,script:chatScript(D)};CHATS.push(c);return c;
+}
+const _pf6=profileFrame;
+profileFrame=function(it,backId){ ST.lastPerson=it;const r=_pf6(it,backId);ROUTE['732:32348']=chatRoute;return r; };
+function chatRoute(){
+  const it=ST.lastPerson;const c=it&&it.person?chatFor(it):CHATS.find(x=>x.id==='karin');
+  ST.chatBack=cur&&cur._fid||null;return chatFrame(c.id);
+}
+ROUTE['732:32348']=chatRoute;
+
+/* ---------- Textile and Coding: their own crews ---------- */
+const ROSTER={
+  Textile:[['Yael Ben-David','3rd','Shenkar','Weaving',2],['Noga Shalev','2nd','Shenkar','Print Design',1],['Maayan Cohen','4th','Bezalel','Natural Dyes',3],
+    ['Tal Biton','3rd','HIT','Embroidery',2],['Shir Avraham','2nd','Shenkar','Knitting',1],['Liat Dahan','4th','Shenkar','Surface Design',3],
+    ['Ella Friedman','3rd','Bezalel','Screen Printing',2],['Gal Weiss','1st','Shenkar','Felting',1],['Mor Hadad','2nd','HIT','Jacquard',2],
+    ['Eden Levi','3rd','Shenkar','Material Research',2],['Rotem Klein','4th','Bezalel','Upholstery',3]],
+  Coding:[['Omer Barak','3rd','HIT','Front End',2],['Itay Segal','2nd','HIT','Creative Coding',1],['Yonatan Gal','4th','HIT','React',3],
+    ['Nadav Oren','3rd','Shenkar','Generative Art',2],['Daniel Ashkenazi','2nd','HIT','Python',1],['Lihi Harel','4th','HIT','UX/UI',3],
+    ['Guy Tal','3rd','Bezalel','Arduino',2],['Eyal Ziv','1st','HIT','JavaScript',1],['Ofek Navon','2nd','HIT','Game Dev',2],
+    ['Matan Rosen','3rd','Shenkar','Data Viz',2],['Bar Elkayam','4th','HIT','Web Design',3]],
+};
+function deptGrid(dept){
+  return grid('dept-'+dept,'709:26571','people',G=>{attachPeople(G);const R=ROSTER[dept];let i=0;
+    for(const it of Object.values(G.items)){if(!it.person)continue;const r=R[i++%R.length];const first=r[0].split(' ')[0];
+      it.person={name:r[0],first,year:r[1],college:r[2],dept,skill:r[3],credits:r[4],label:`${first} · ${r[1]} · ${r[2]}`};}
+    G.dept=dept;});
+}
+function deptGridFrame(dept){
+  const id=gridFrame(deptGrid(dept));const t=N[id].k.find(c=>c.y==='TE'&&/^Welcome to the/.test(c.ch||''));
+  if(t){const i=t.ch.indexOf('Visual Communication');if(i>=0){t.ch=t.ch.replace('Visual Communication',dept);const d=dept.length-20;
+    t.sg=t.sg.map(s=>{s=[...s];if(s[0]>i)s[0]+=d;if(s[1]>i)s[1]+=d;return s;});}}
+  return id;
+}
+const _act6=APP.action;
+APP.action=(el,a)=>{
+  if(a.f==='deptgrid'){show(deptGridFrame(a.d),{t:'SMART_ANIMATE',du:1,e:'GENTLE'});return;}
+  if(a.f==='grid'&&ST.grids[a.g]&&ST.grids[a.g].dept){const G=ST.grids[a.g],it=G.items[a.id];
+    if(G.sel===a.id&&it.person){show(profileFrame(it,cur._fid),GENTLE);return;}
+    if(G.sel===a.id)return;gridSelect(G,a.id);show(deptGridFrame(G.dept),GENTLE);return;}
+  if(a.f==='sopen'){ST.setOpen=ST.setOpen===a.k?null:a.k;show(settingsFrame(),{t:'SMART_ANIMATE',du:.6,e:'GENTLE'});return;}
+  if(a.f==='set'&&a.k==='accent'){ST.accent=a.v;show(settingsFrame(),{t:'SMART_ANIMATE',du:.45,e:'EASE_OUT'});return;}
+  _act6(el,a);
+};
+
+/* ---------- settings: titles only, a tile opens when you tap it ----------
+   Like "My Profile": every tile shows just its title; tap one and it grows
+   (in your colour) to show what's inside. The avatar is a picture only. */
+const S_CLOSED={avatar:[13,208,143,143],skills:[13,364,143,156],colour:[169,208,221,234],details:[247,455,143,195],credits:[13,533,221,117],projects:[13,663,377,195,[4,4,50,50]]};
+const S_SLOTS=[[13,455,143,65],[13,533,221,65],[13,611,182,247,[4,4,4,50]],[208,611,182,247,[4,4,50,4]]];
+const S_TITLE={skills:'Skills',colour:'Colour',details:'Details',credits:'Credits',projects:'Projects'};
+function settingsLayout(open){
+  if(!open)return S_CLOSED;
+  const L={avatar:[247,455,143,143]};L[open]=[13,208,377,234];
+  ['colour','skills','details','credits','projects'].filter(k=>k!==open).forEach((k,i)=>L[k]=S_SLOTS[i]);
+  return L;
+}
+settingsFrame=function(){
+  const A=accent(),T=tintOf(A),I=ink(A),W=lum(A)>.55?mix(A,'#000000',.62):'#ffffff',D=meData(),open=ST.setOpen||null;
+  const f=clone(N['709:26284']);
+  const keep=f.k.filter(c=>c.n==='Status bar'||/^My Profile/.test(c.ch||''));
+  const title=keep.find(c=>/^My Profile/.test(c.ch||''));
+  if(title){const a='Settings\n',b=D.name;title.ch=a+b;title.sg=[[0,a.length,...title.sg[0].slice(2)],[a.length,title.ch.length,...title.sg[1].slice(2)]];}
+  const L=settingsLayout(open),k=[];
+  const go=(d,from)=>[{t:'ON_CLICK',a:[{n:'APP',f:'edit',d,from}]}];
+  const btn=(n,x,y,w,t,r)=>{k.push(tile(n,x,y,w,50,'#ffffff',4,r),Object.assign(lbl(n+'-l',x,y+14,w,t,I,t.length>2?15:22),{ah:'C'}));};
+  // avatar: the picture only, in its own square — tap to change it
+  {const [x,y,w,h]=L.avatar;k.push(tile('s-avatar',x,y,w,h,T,4,go('709:27721','709:27721')));
+    const av={n:'s-avatar-g',y:'GR',g:ST.avatar||DEF_AVATAR,fit:1};fitAvatar(av,{x,Y:y,w,h});k.push(av);}
+  for(const key of Object.keys(S_TITLE)){
+    const [x,y,w,h,cr]=L[key],on=key===open;
+    k.push(tile('s-'+key,x,y,w,h,on?A:T,cr||4,act({f:'sopen',k:key})),lbl('s-'+key+'-l',x+13,y+11,w-26,S_TITLE[key],on?W:I));
+    if(!on)continue;
+    const x2=x+w-13,yb=y+h-13;
+    if(key==='colour'){
+      const sub=lbl('s-colour-s',x+13,y+37,300,'The whole app follows it.',W,14,'Regular');k.push(sub);
+      k.push(tile('s-sw-panel',x+13,yb-64,w-26,64,'#ffffff',4));
+      SET_COLORS.forEach((c,i)=>{const sx=x+19+i*34.6;k.push(tile('sw-'+i,sx,yb-58,30,52,c,4,act({f:'set',k:'accent',v:c})));
+        if(c===A)k.push({n:'sw-on',y:'RE',x:sx+10,Y:yb-16,w:10,h:4,f:[{t:'S',c:'#ffffff',o:1}],cr:2,fixc:1});});
+    }
+    if(key==='skills'){
+      const sk=(D.skills||[]).slice(0,4);const n=lbl('s-skills-v',x+13,y+43,w-26,sk.join('\n'),W,22,'Bold');n.h=120;n.sg[0][7]='%120';k.push(n);
+      btn('s-skills-e',x2-110,yb-50,110,'Edit',go('709:29101','709:29101'));
+    }
+    if(key==='details'){
+      const n=lbl('s-details-v',x+13,y+43,w-26,`${D.email}\n${D.link}\n${D.insta}`,W,16,'Regular');n.h=90;n.sg[0][7]='%150';k.push(n);
+      btn('s-details-e',x2-110,yb-50,110,'Edit',go('709:28996','901:16128'));
+    }
+    if(key==='credits'){
+      const n=lbl('s-credits-v',x+13,yb-70,150,String(ST.credits),W,64);n.h=72;k.push(n);
+      btn('s-credits-m',x2-108,yb-50,50,'−',act({f:'count',k:'credits',d:-1}));btn('s-credits-p',x2-50,yb-50,50,'+',act({f:'count',k:'credits',d:1}));
+    }
+    if(key==='projects'){
+      [['led','I led'],['joined','I joined']].forEach(([kk,t],i)=>{const ry=y+48+i*84;
+        k.push(lbl('s-'+kk+'-t',x+13,ry,150,t,W,14,'Regular'));const n=lbl('s-'+kk+'-v',x+13,ry+20,150,String(ST[kk]),W,40);n.h=48;k.push(n);
+        btn('s-'+kk+'-m',x2-108,ry+12,50,'−',act({f:'count',k:kk,d:-1}));btn('s-'+kk+'-p',x2-50,ry+12,50,'+',act({f:'count',k:kk,d:1}));});
+    }
+  }
+  k.push({n:'home-btn',y:'GR',g:'a0o6sp30d',x:169,Y:455,w:65,h:65,cr:4,r:HOME_TAP()});
+  const si=keep.findIndex(c=>c.n==='Status bar');f.k=[...keep.slice(0,si),...k,...keep.slice(si)];
+  f.r=[{t:'ON_DRAG',a:[{n:'NAVIGATE',d:'709:26284',tr:{...PUSHB}}]}];
+  return addFrame('709:26284',f);
+};
+// arriving at settings starts with every tile closed (coming back from an edit keeps the tile you were in)
+ROUTE[SETTINGS_ID]=()=>{if(!ST.keepOpen)ST.setOpen=null;ST.keepOpen=false;return settingsFrame();};
+
+function prepPart6(){
+  // Mission crew: Textile and Coding open their crews too (Visual Communication already does)
+  for(const fid of ['709:26483']){const f=N[fid];if(!f)continue;
+    const vc=f.k.find(c=>c.n==='Rectangle 34'),vl=f.k.find(c=>c.y==='TE'&&/^Visual Communication/.test(c.ch||''));if(vc&&vl&&!vl.r)vl.r=clone(vc.r);
+    for(const [rn,re,d] of [['Rectangle 35',/^Textile/,'Textile'],['Rectangle 36',/^Coding/,'Coding']]){
+      const r=act({f:'deptgrid',d});const t=f.k.find(c=>c.n===rn),l=f.k.find(c=>c.y==='TE'&&re.test(c.ch||''));if(t)t.r=r;if(l)l.r=clone(r);}}
+  // every "Message …" tile opens a chat with that person
+  for(const f of Object.values(N)){if(!f||!f.k||f.y!=='FR')continue;
+    const m=f.k.find(c=>c.y==='TE'&&/^Message \w/.test(c.ch||''));if(!m)continue;
+    const box=f.k.find(c=>c.y==='RE'&&c.x<=m.x&&c.Y<=m.Y&&c.x+c.w>=m.x+20&&c.Y+c.h>=m.Y+10);
+    if(box&&!(box.r&&box.r.length))box.r=[{t:'ON_CLICK',a:[{n:'NAVIGATE',d:'732:32348',tr:{t:'SMART_ANIMATE',du:.77,e:'GENTLE'}}]}];}
+}
+const _act6b=APP.action;
+APP.action=(el,a)=>{ if(a.f==='edit')ST.keepOpen=true; _act6b(el,a); };
+</script>
 <style>
 html.app-dark #phone{background:#242424}
 html.app-dark body.onphone{background:#242424}
@@ -1910,7 +2040,7 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v19';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v20';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
@@ -1928,7 +2058,7 @@ window.__lorem={show:id=>{if(cur){cur.remove();cur=null;}busy=false;clearTimers(
   try{
     const [n,s]=await Promise.all([fetch('nodes.json').then(r=>r.json()),fetch('svg.json').then(r=>r.json())]);
     N=n;SVG=s;prepShadows();for(const o of Object.values(N))indexComps(o,null);
-    prep();prepRoutes();prepOnboarding();prepProject();prepPart4();prepPart5();
+    prep();prepRoutes();prepOnboarding();prepProject();prepPart4();prepPart5();prepPart6();
     fetch('splash.mp4').then(r=>{if(!r.ok)throw 0;return r.blob();}).then(b=>{VIDEO=URL.createObjectURL(b);}).catch(()=>{VIDEO=null;});
     fetch('poster.png').then(r=>{if(!r.ok)throw 0;return r.blob();}).then(b=>{POSTER=URL.createObjectURL(b);}).catch(()=>{});
     document.getElementById('msg').remove();
@@ -1939,6 +2069,3 @@ window.__lorem={show:id=>{if(cur){cur.remove();cur=null;}busy=false;clearTimers(
   }catch(e){console.error(e);document.getElementById('msg').textContent='Could not load the prototype data.';}
 })();
 </script>
-
-</body>
-</html>
