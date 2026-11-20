@@ -2628,20 +2628,21 @@ chatFrame=function(id){
     title.sg=[[0,a.length,'Helvetica Neue','Bold',32,'#d8d8d8',1,'%105','%0',0,0],[a.length,title.ch.length,'Helvetica Neue','Bold',32,c.color?pInk:'#3361ff',1,'%105','%0',0,0]];title.n='My Profile chat';}
   const k=[];const gap=13,top=221;
   // the typing bar (like WhatsApp): grows up to 4 lines, send button on its right
-  const draft=ST.chatDraft||'';const dl=draft?Math.min(4,lineH(draft,267,16)):1;const barH=Math.max(50,dl*20+30),barY=563-barH;
+  const kbTop=chatKbTop(),barBot=kbTop-13;const draft=ST.chatDraft||'';const dl=draft?Math.min(4,lineH(draft,267,16)):1;const barH=Math.max(50,dl*20+30),barY=barBot-barH;
   k.push({n:'chat-bar',y:'RE',x:13,Y:barY,w:317,h:barH,cr:25,f:[{t:'S',c:'#f2f2f7',o:1}]});
   if(draft){const t=lbl('chat-bar-t',33,barY+15,277,draft,'#242424',16,'Regular');t.h=barH-24;t.sg[0][7]='%125';k.push(t);
     let ln='';for(const wd of draft.split(' ')){const tr=ln?ln+' '+wd:wd;if(textW(tr,16,400)>267&&ln)ln=wd;else ln=tr;}
     k.push({n:'chat-caret',y:'RE',x:33+Math.min(270,textW(ln,16,400))+1,Y:barY+barH-35,w:2,h:20,f:[{t:'S',c:A,o:1}],fixc:1});}
   else{k.push(lbl('chat-bar-ph',33,barY+15,260,'Message','#aeaeb2',16,'Regular'));k.push({n:'chat-caret',y:'RE',x:33,Y:barY+15,w:2,h:20,f:[{t:'S',c:A,o:1}],fixc:1});}
-  k.push({n:'chat-send',y:'RE',x:340,Y:563-50,w:50,h:50,cr:25,f:[{t:'S',c:draft?A:tintOf(A),o:1}],fixc:1,r:act({f:'chatsend'})});
-  k.push({n:'chat-send-i',y:'GR',g:'xsend',x:353,Y:563-37,w:24,h:24,r:act({f:'chatsend'})});
+  k.push({n:'chat-send',y:'RE',x:340,Y:barBot-50,w:50,h:50,cr:25,f:[{t:'S',c:draft?A:tintOf(A),o:1}],fixc:1,r:act({f:'chatsend'})});
+  k.push({n:'chat-send-i',y:'GR',g:'xsend',x:353,Y:barBot-37,w:24,h:24,r:act({f:'chatsend'})});
   const bottom=barY-gap;
   const list=[...s.log];if(s.typing)list.push({from:'in',t:'• • •',typing:1});
-  const lines=t=>lineH(t,196,16);const items=[];let used=0;
-  for(let i=list.length-1;i>=0;i--){const m=list[i];const h=Math.max(39,lines(m.t)*17+22);if(used+h>bottom-top&&items.length)break;items.unshift({m,i,h});used+=h+gap;}
-  let y=top;
-  for(const it of items){const m=it.m,me=m.from==='me';const w=Math.min(221,Math.ceil(textW(m.t,16,400))+27);
+  const lines=t=>lineH(t,196,16);const all=[];let total=0;
+  for(let i=list.length-1;i>=0;i--){const m=list[i];const h=Math.max(39,lines(m.t)*17+22);all.unshift({m,i,h});total+=h+gap;}
+  const maxScroll=Math.max(0,total-gap-(bottom-top));ST.chatScroll=Math.max(0,Math.min(maxScroll,ST.chatScroll||0));ST.chatMax=maxScroll;
+  let yy=bottom+ST.chatScroll;const items=[];for(let j=all.length-1;j>=0;j--){yy-=all[j].h;all[j].y=yy;yy-=gap;if(all[j].y>=top-1&&all[j].y+all[j].h<=bottom+1)items.unshift(all[j]);}
+  for(const it of items){const m=it.m,me=m.from==='me';const y=it.y;const w=Math.min(221,Math.ceil(textW(m.t,16,400))+27);
     const x=me?52:351-w;
     k.push({n:'msg-'+it.i,y:'RE',x,Y:y,w,h:it.h,cr:4,f:[{t:'S',c:me?A:pc,o:me?.18:.16}],fixc:1,o:m.draft?.75:1});
     const t=lbl('msg-'+it.i+'-t',x+13,y+11,w-24,m.t,me?meInk:pInk,16,m.typing?'Bold':'Regular');t.h=it.h-16;t.sg[0][7]='%106';k.push(t);
@@ -2650,7 +2651,7 @@ chatFrame=function(id){
       const g=c.g||faceFor(c.name||'crew');const av={n:'msg-'+it.i+'-avg',y:'GR',g,fit:1};fitAvatar(av,{x:364,Y:y,w:27,h:27});k.push(av);}
     if(m.draft){let ln='',last='';for(const wd of m.t.split(' ')){const tr=ln?ln+' '+wd:wd;if(textW(tr,16,400)>196&&ln){ln=wd;}else ln=tr;}last=ln;
       k.push({n:'msg-caret',y:'RE',x:x+13+Math.min(w-26,textW(last,16,400))+1,Y:y+it.h-28,w:2,h:18,f:[{t:'S',c:meInk,o:1}],fixc:1});}
-    y+=it.h+gap;}
+    }
   const kb=clone(N['732:32348'].k.find(c2=>/Keyboard/.test(c2.n)));kb.n='keyboard';kb.r=[];k.push(kb);
   const si=keep.findIndex(c2=>c2.n==='Status bar');f.k=[...keep.slice(0,si),...k,...keep.slice(si)];
   f.r=[{t:'ON_DRAG',a:[{n:'APP',f:'back',tr:{dir:'RIGHT'}}]}];
@@ -2688,8 +2689,12 @@ document.addEventListener('keydown',e=>{ if(e.target===NK||e.metaKey||e.ctrlKey|
   const m={Backspace:'back',Enter:'return',' ':'space'};const k=m[e.key]||(e.key.length===1?e.key:null);if(!k)return;e.preventDefault();chatKey(k);});
 document.addEventListener('paste',e=>{ if(e.target===NK||!chatScreen())return;const t=e.clipboardData&&e.clipboardData.getData('text');if(t){e.preventDefault();ST.chatDraft=((ST.chatDraft||'')+t).slice(0,300);chatRefresh(false);} });
 // the phone's own keyboard in a chat
-phone.addEventListener('touchend',()=>{ if(!NATIVE||!chatScreen())return;
-  if(document.activeElement!==NK||NK._set!=='CHAT'){NK._set=null;nativeFocus('CHAT');NK._prev=NK.value=ST.chatDraft||'';} });
+// the keyboard opens when you tap the typing bar, and closes when you tap anywhere else (or scroll the conversation)
+phone.addEventListener('touchend',e=>{ if(!NATIVE||!chatScreen())return;
+  const el=e.target.closest&&e.target.closest('.n');const nm=el&&el._n&&el._n.n||'';
+  if(/^chat-send/.test(nm))return;
+  if(/^chat-bar|^chat-caret/.test(nm)){ if(document.activeElement!==NK||NK._set!=='CHAT'){NK._set=null;nativeFocus('CHAT');NK._prev=NK.value=ST.chatDraft||'';} return; }
+  if(document.activeElement===NK){NK.blur();} });
 const _act14=APP.action;
 APP.action=(el,a)=>{
   if(a.f==='back'){goBack();return;}
@@ -2960,6 +2965,75 @@ function showNote(c,msg){
 }
 const _show17=show;show=function(id,tr,isBack){_show17(id,tr,isBack);if(cur&&[MENU,HOME].includes(baseOf(cur._fid)))startNotes();};
 </script>
+<script>
+/* ======================================================================
+   Part 18 — chats that really talk (Claude answers, in character), scroll
+   back through a conversation, a typing bar that sits on the keyboard (or
+   at the bottom when the keyboard is down), and a full 3×5 avatar grid.
+   ====================================================================== */
+// where the keyboard starts, in screen points: the drawn keyboard (576), or the phone's real one
+function chatKbTop(){
+  if(!NATIVE)return 576;
+  if(document.activeElement===NK&&NK._set==='CHAT'&&window.visualViewport){
+    const vv=visualViewport,r=phone.getBoundingClientRect(),s=phone._s||1;const t=(vv.offsetTop+vv.height-r.top)/s;
+    if(t<860)return Math.max(300,t);}
+  return 871;
+}
+let KB_RAF=0;const kbChanged=()=>{if(!chatScreen()||KB_RAF)return;KB_RAF=requestAnimationFrame(()=>{KB_RAF=0;chatRefresh(false);});};
+if(window.visualViewport){visualViewport.addEventListener('resize',kbChanged);visualViewport.addEventListener('scroll',kbChanged);}
+NK.addEventListener('focus',()=>setTimeout(kbChanged,350));NK.addEventListener('blur',()=>setTimeout(kbChanged,120));
+
+// scroll a conversation: drag with the finger, or the mouse wheel
+let CS=null;
+phone.addEventListener('pointerdown',e=>{if(!chatScreen())return;const r=phone.getBoundingClientRect(),s=phone._s||1,y=(e.clientY-r.top)/s;if(!ST.chatMax||y<215||y>chatKbTop()-70)return;CS={y:e.clientY,s:ST.chatScroll||0,moved:false};},true);
+phone.addEventListener('pointermove',e=>{if(!CS||!chatScreen())return;const d=(e.clientY-CS.y)/(phone._s||1);if(!CS.moved&&Math.abs(d)<8)return;CS.moved=true;if(down)down.dragged=true;if(NATIVE&&document.activeElement===NK)NK.blur();
+  ST.chatScroll=CS.s+d;if(!KB_RAF)KB_RAF=requestAnimationFrame(()=>{KB_RAF=0;chatRefresh(false);});},true);
+phone.addEventListener('pointerup',()=>{CS=null;},true);
+phone.addEventListener('wheel',e=>{if(!chatScreen())return;e.preventDefault();ST.chatScroll=(ST.chatScroll||0)-e.deltaY/(phone._s||1);kbChanged();},{passive:false});
+
+// Claude writes their side of the conversation (on claude.ai, where the page may ask Claude); elsewhere the built-in replies
+let SAMPLE=null,SAMPLE_OFF=false;
+try{if(window.claude&&window.claude.use)window.claude.use('sample').then(s=>{SAMPLE=s||null;}).catch(()=>{});}catch(e){}
+function chatRules(c){
+  const cp=chatPerson(c),D=c.it?personData(c.it):null,me=meData();
+  const who=D?`${D.name}, a ${D.year}-year ${D.dept} student at ${D.college}. Skills: ${D.skills.join(', ')}. Your projects: ${D.projects.join('; ')}. Your portfolio: ${D.link}, Instagram ${D.insta}.`
+    :`${cp.name||'a student'}${c.sub?' (the crew of "'+c.sub+'")':''}, a design student.`;
+  return `You are ${who}\nYou are chatting inside &Lorem, an app where design students find a crew for their projects (they earn credits for helping).\n`+
+    `You are talking with ${me.name}, a ${me.year}-year ${me.dept} student at ${me.college}. Their skills: ${(me.skills||[]).join(', ')}.`+
+    ((ST.about||'').trim()?` Their current project: "${ST.about.trim()}".`:'')+
+    `\nReply ONLY as ${cp.first||cp.name||'yourself'}, in English, like a real text message: casual, warm, 1–2 short sentences, answer exactly what they just wrote, ask a question back sometimes. Never say you are an AI. No quotes, no name prefix.`;
+}
+async function chatAnswer(c,id){
+  const s=chatState(id);
+  if(SAMPLE&&!SAMPLE_OFF){
+    const turns=[{role:'user',content:chatRules(c)}];for(const m of s.log.slice(-24))turns.push({role:m.from==='me'?'user':'assistant',content:m.t});
+    if(turns[turns.length-1].role!=='user')turns.push({role:'user',content:'(they are waiting for your reply)'});
+    try{const {text}=await SAMPLE(turns,{modelTier:'quick',cache:false});const t=(text||'').trim();if(t)return t.replace(/^["“]|["”]$/g,'');}
+    catch(e){if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].includes(e&&e.code))SAMPLE_OFF=true;}
+  }
+  return chatAuto(chatPerson(c),s.log.filter(m=>m.from==='me').slice(-1)[0].t);
+}
+chatSend=function(){
+  const id=ST.chatId,txt=(ST.chatDraft||'').trim();if(!id||!txt)return;const c=CHATS.find(z=>z.id===id),s=chatState(id);
+  s.log.push({from:'me',t:txt});s.last=Date.now();ST.chatDraft='';ST.chatScroll=0;if(NK&&NK._set==='CHAT')NK._prev=NK.value='';
+  chatRefresh(true);
+  const t0=Date.now();setTimeout(()=>{s.typing=true;if(chatScreen()&&ST.chatId===id)chatRefresh(true);},500);
+  chatAnswer(c,id).then(answer=>{const wait=Math.max(0,1200+Math.min(1400,answer.length*20)-(Date.now()-t0));
+    setTimeout(()=>{s.typing=false;s.log.push({from:'in',t:answer});s.last=Date.now();ST.chatScroll=0;
+      if(chatScreen()&&ST.chatId===id){s.read=1;chatRefresh(true);}else s.read=0;},wait);});
+};
+const _act18=APP.action;APP.action=(el,a)=>{if(a.f==='chat')ST.chatScroll=0;_act18(el,a);};
+
+// avatars: always a full 3 × 5 grid (repeat faces only if there are not enough)
+const _ag18=avatarGrid;
+avatarGrid=function(){const had=!!ST.grids.avatar;const G=_ag18();if(had)return G;
+  const own=G.items.own,need=own?14:15,ids=Object.keys(G.items).filter(k=>k!=='own');
+  if(ids.length<need){const pool=avatarPool();for(let i=ids.length;i<need;i++){const g=pool[i%pool.length];const [w0,h0]=svgSize(g);const sc=Math.min(117*.72/h0,117*.6/w0);
+      G.items['t'+i]={id:'t'+i,color:'#dee6ff',char:{g,w:w0*sc,h:h0*sc}};G.order.push('t'+i);}
+    G.lay=layout(G.order,null,null);}
+  return G;};
+R(['709:27721','709:27854','709:27987','709:28120','709:28253','709:28386','709:28519'],()=>gridFrame(avatarGrid()));
+</script>
 <style>
 html.app-dark #phone{background:#242424}
 html.app-dark body.onphone{background:#242424}
@@ -2967,7 +3041,7 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v35';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v37';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
