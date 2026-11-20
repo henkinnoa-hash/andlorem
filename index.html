@@ -7,9 +7,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="&amp;Lorem">
-<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#242424" media="(prefers-color-scheme: dark)">
-<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#ffffff">
+<meta name="color-scheme" content="light only">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" href="icon.png">
@@ -1635,6 +1634,7 @@ function renderSearch(f,st){
 function openResult(r){
   if(!r)return;
   if(r.type==='person'){const it=r.it;if(!it.person.label)it.person.label=it.person.name;show(profileFrame(it,cur._fid),GENTLE);return;}
+  if(r.type==='dept'&&typeof deptPage==='function'){show(deptPage(r.title),GENTLE);return;}
   if(r.type==='project'){const e=searchIndex().find(x=>x.type==='person'&&x.title===r.owner);if(e)return openResult(e);}
   // a department, college, year or skill narrows the search to the people who have it
   ST.q=r.title.replace(/ year$/,'')+' ';const f=[...cur.querySelectorAll('.n')].find(e=>e._inst&&SETOF[e._inst.cur]===SEARCH_SET);
@@ -1893,7 +1893,7 @@ APP.action=(el,a)=>{
 };
 
 /* ---------- dark mode: white becomes #242424, black type becomes white ---------- */
-const DARKQ=matchMedia('(prefers-color-scheme: dark)');let DARK=DARKQ.matches;
+const DARKQ=matchMedia('(prefers-color-scheme: dark)');let DARK=false; // dark mode is off until it is designed
 const DARK_INK=new Set(['#242424','#000000','#2b2b2b','#1c1c1e','#121212','#262626','#1e1e1e','#222222']);
 const _mf=APP.mapFill,_mt=APP.mapText;
 APP.mapFill=(hex,o)=>{ const r=_mf(hex,o);if(!DARK)return r;const h=(r||'').toLowerCase();
@@ -1905,7 +1905,7 @@ APP.mapText=(hex,size,o)=>{ const r=_mt(hex,size,o);if(!DARK)return r;const h=(r
   return r; };
 function applyDark(){ document.documentElement.classList.toggle('app-dark',DARK); }
 applyDark();
-DARKQ.addEventListener('change',e=>{DARK=e.matches;applyDark();if(cur&&!busy){const id=cur._fid;show(id);}});
+DARKQ.addEventListener('change',e=>{DARK=false;applyDark();if(cur&&!busy){const id=cur._fid;show(id);}});
 </script>
 <script>
 /* ======================================================================
@@ -2317,7 +2317,7 @@ phone.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('
    ====================================================================== */
 const FIRSTS=['Noga','Yael','Itay','Omer','Shira','Tal','Lior','Maayan','Daniel','Roni','Gal','Eden','Nadav','Ella','Yonatan','Mika','Ofek','Tamar','Guy','Noa','Ido','Hila','Amit','Bar','Shaked','Inbar','Yuval','Neta','Alon','Dana','Rotem','Matan','Keren','Liam','Adi','Ori','Michal','Eyal','Sapir','Ben'];
 const LASTS=['Cohen','Levi','Mizrahi','Peretz','Biton','Dahan','Avraham','Friedman','Shalev','Golan','Ben-David','Azulay','Katz','Weiss','Hadad','Barak','Segal','Oren','Harel','Navon','Rosen','Klein','Ziv','Tal','Shapira','Elkayam','Sela','Mor','Ronen','Gabay'];
-const COLLEGES=['HIT','Shenkar','Bezalel'],YEARS4=['1st','2nd','3rd','4th'];
+let COLLEGES=['HIT','Shenkar','Bezalel'],YEARS4=['1st','2nd','3rd','4th'];
 const EXTRA_DEPT={'Poster Design':'Visual Communication','Key Art':'Visual Communication','Print Production':'Visual Communication','Motion':'Animation',
   'Studio Lighting':'Photography','Lighting Design':'Architecture','Creative Coding':'Coding','Data Viz':'Coding','Arduino':'Coding'};
 function deptsFor(skill){const out=Object.keys(DEPT_SKILLS).filter(d=>DEPT_SKILLS[d].includes(skill));if(!out.length&&EXTRA_DEPT[skill])out.push(EXTRA_DEPT[skill]);if(!out.length)out.push('Visual Communication');return out;}
@@ -2626,8 +2626,18 @@ chatFrame=function(id){
   const title=keep.find(c2=>/^My Profile/.test(c2.ch||''));
   if(title){const a='Message\n',b=c.name||c.sub;title.ch=a+b;title.x=13;title.Y=102;title.w=377;title.h=80;
     title.sg=[[0,a.length,'Helvetica Neue','Bold',32,'#d8d8d8',1,'%105','%0',0,0],[a.length,title.ch.length,'Helvetica Neue','Bold',32,c.color?pInk:'#3361ff',1,'%105','%0',0,0]];title.n='My Profile chat';}
-  const k=[];const top=221,bottom=563,gap=13;
-  const list=[...s.log];if(ST.chatDraft)list.push({from:'me',t:ST.chatDraft,draft:1});if(s.typing)list.push({from:'in',t:'• • •',typing:1});
+  const k=[];const gap=13,top=221;
+  // the typing bar (like WhatsApp): grows up to 4 lines, send button on its right
+  const draft=ST.chatDraft||'';const dl=draft?Math.min(4,lineH(draft,267,16)):1;const barH=Math.max(50,dl*20+30),barY=563-barH;
+  k.push({n:'chat-bar',y:'RE',x:13,Y:barY,w:317,h:barH,cr:25,f:[{t:'S',c:'#f2f2f7',o:1}]});
+  if(draft){const t=lbl('chat-bar-t',33,barY+15,277,draft,'#242424',16,'Regular');t.h=barH-24;t.sg[0][7]='%125';k.push(t);
+    let ln='';for(const wd of draft.split(' ')){const tr=ln?ln+' '+wd:wd;if(textW(tr,16,400)>267&&ln)ln=wd;else ln=tr;}
+    k.push({n:'chat-caret',y:'RE',x:33+Math.min(270,textW(ln,16,400))+1,Y:barY+barH-35,w:2,h:20,f:[{t:'S',c:A,o:1}],fixc:1});}
+  else{k.push(lbl('chat-bar-ph',33,barY+15,260,'Message','#aeaeb2',16,'Regular'));k.push({n:'chat-caret',y:'RE',x:33,Y:barY+15,w:2,h:20,f:[{t:'S',c:A,o:1}],fixc:1});}
+  k.push({n:'chat-send',y:'RE',x:340,Y:563-50,w:50,h:50,cr:25,f:[{t:'S',c:draft?A:tintOf(A),o:1}],fixc:1,r:act({f:'chatsend'})});
+  k.push({n:'chat-send-i',y:'GR',g:'xsend',x:353,Y:563-37,w:24,h:24,r:act({f:'chatsend'})});
+  const bottom=barY-gap;
+  const list=[...s.log];if(s.typing)list.push({from:'in',t:'• • •',typing:1});
   const lines=t=>lineH(t,196,16);const items=[];let used=0;
   for(let i=list.length-1;i>=0;i--){const m=list[i];const h=Math.max(39,lines(m.t)*17+22);if(used+h>bottom-top&&items.length)break;items.unshift({m,i,h});used+=h+gap;}
   let y=top;
@@ -2641,7 +2651,6 @@ chatFrame=function(id){
     if(m.draft){let ln='',last='';for(const wd of m.t.split(' ')){const tr=ln?ln+' '+wd:wd;if(textW(tr,16,400)>196&&ln){ln=wd;}else ln=tr;}last=ln;
       k.push({n:'msg-caret',y:'RE',x:x+13+Math.min(w-26,textW(last,16,400))+1,Y:y+it.h-28,w:2,h:18,f:[{t:'S',c:meInk,o:1}],fixc:1});}
     y+=it.h+gap;}
-  if(!ST.chatDraft&&!s.typing){const ph=lbl('chat-hint',52,Math.min(y,bottom-30),300,'Type a message…','#c7c7cc',16,'Regular');k.push(ph);}
   const kb=clone(N['732:32348'].k.find(c2=>/Keyboard/.test(c2.n)));kb.n='keyboard';kb.r=[];k.push(kb);
   const si=keep.findIndex(c2=>c2.n==='Status bar');f.k=[...keep.slice(0,si),...k,...keep.slice(si)];
   f.r=[{t:'ON_DRAG',a:[{n:'APP',f:'back',tr:{dir:'RIGHT'}}]}];
@@ -2753,6 +2762,204 @@ APP.action=(el,a)=>{
   _act15(el,a);
 };
 </script>
+<script>
+/* ======================================================================
+   Part 16 — department pages from search, the project summary
+   ("My Current Project"), and Chats as a grid of faces.
+   ====================================================================== */
+const SEND_SVG='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function prepPart16(){
+  SVG['xsend']=SEND_SVG;
+  for(const c of N[MENU].k)for(const r of c.r||[])for(const a of r.a)if(a.n==='NAVIGATE'&&a.d==='709:26483'){a.d='PJ:summary';a.tr={t:'SMART_ANIMATE',du:.77,e:'GENTLE'};}
+}
+const _cab16=chatAfterBuild;chatAfterBuild=s=>{_cab16(s);const c=child(s,'chat-caret');if(c)c.classList.add('blink');};
+const _act16=APP.action;
+APP.action=(el,a)=>{
+  if(a.f==='chatsend'){chatSend();return;}
+  if(a.f==='pjopen'){ST.pjOpen=ST.pjOpen===a.k?null:a.k;show(projectFrame(),{t:'SMART_ANIMATE',du:.6,e:'GENTLE'});return;}
+  if(a.f==='crewall'){show('709:26483',{...GENTLE});return;}
+  _act16(el,a);
+};
+
+/* ---------- a department page: its students (new faces each visit of the app) ---------- */
+function deptPage(dept){
+  const key='deptpage-'+dept;let G=ST.grids[key];
+  if(!G){G=gridFromFrame(key,'709:26571','people');
+    const faces=shuffle(avatarPool()),pool=shuffle([...(DEPT_SKILLS[dept]||SKILL_POOL)]);let i=0;
+    const its=Object.values(G.items).filter(x=>!x.own);
+    for(const it of its){const name=FIRSTS[Math.floor(Math.random()*FIRSTS.length)]+' '+LASTS[Math.floor(Math.random()*LASTS.length)];
+      const first=name.split(' ')[0],year=YEARS4[Math.floor(Math.random()*4)],college=COLLEGES[Math.floor(Math.random()*3)],skill=pool[i%pool.length];
+      it.person={name,first,year,college,dept,skill,credits:1+Math.floor(Math.random()*4),label:`${first} · ${year} · ${college}`};
+      const g=faces[i%faces.length];const [w0,h0]=svgSize(g);const sc=Math.min(117*.72/h0,117*.6/w0);it.char={g,w:w0*sc,h:h0*sc};i++;}
+    G.crew=dept;ST.grids[key]=G;}
+  return crewGridFrame(G);
+}
+
+/* ---------- My Current Project: a summary, in the language of Settings ---------- */
+const PJ_KEY={crew:'avatar',about:'colour',timeline:'general',need:'skills',requests:'credits',bring:'projects',budget:'info'};
+const PJ_TITLE={about:'The\nProject',timeline:'Timeline',need:'I Need',requests:'Asked to\nJoin',bring:'I Bring',budget:'Budget'};
+function crewPeople(){const P=crewPlan();const out=[];
+  for(const d of Object.keys(P.depts)){const G=crewGrid(d);const its=Object.values(G.items).filter(x=>x.person);
+    const n=P.depts[d].n;its.sort((a,b)=>(b.id===G.sel)-(a.id===G.sel));out.push(...its.slice(0,Math.min(n,4)));}
+  return out;}
+function projectFrame(){
+  const A=accent(),T=tintOf(A),DK=mix(A,'#000000',.45),me=meData(),P=crewPlan(),open=ST.pjOpen||null;
+  const L=SL[open?PJ_KEY[open]:'closed'];const at=key=>L[PJ_KEY[key]];
+  const about=(ST.about||'').trim()||'A project with a strong concept behind it.';
+  const name=about.split(/[.,!?\n]/)[0].split(' ').slice(0,4).join(' ');
+  const people=crewPeople();if(ST.pjAsked==null)ST.pjAsked=Math.min(people.length,2+Math.floor(Math.random()*3));
+  const f=clone(N['709:26284']);const keep=f.k.filter(c=>c.n==='Status bar');
+  const t='My Project\n';const k=[{n:'My Profile project',y:'TE',x:13,Y:102,w:377,h:100,ch:t+name,ah:'L',av:'T',ar:'NONE',
+    sg:[[0,t.length,'Helvetica Neue','Bold',32,'#d8d8d8',1,'%105','%0',0,0],[t.length,t.length+name.length,'Helvetica Neue','Bold',32,'#3361ff',1,'%105','%0',0,0]]}];
+  const tap=key=>act({f:'pjopen',k:key});
+  // the crew: faces of the students the scan found
+  {const [x,y,w,h]=at('crew'),on=open==='crew';k.push(tile('pj-crew',x,y,w,h,on?A:T,4,tap('crew')));
+    const n=on?Math.min(6,people.length):Math.min(w>100?4:1,people.length),cols=on?3:2,cw=(w-26)/cols,chh=on?(h-90)/2:(h-26)/(n>2?2:1);
+    if(!on||true)people.slice(0,n).forEach((it,i)=>{const cx=x+13+(i%cols)*cw,cy=y+(on?44:13)+Math.floor(i/cols)*chh;const av={n:'pj-face-'+i,y:'GR',g:it.char.g,fit:1};fitAvatar(av,{x:cx,Y:cy,w:cw,h:chh});k.push(av);});
+    if(on){const l=lbl('pj-crew-l',x+13,y+11,w-26,`${P.total} found for your project`,'#ffffff',16);k.push(l);
+      k.push(tile('pj-crew-all',x+13,y+h-50,w-26,38,'#ffffff',4,act({f:'crewall'})),Object.assign(lbl('pj-crew-all-l',x+13,y+h-40,w-26,'See the whole crew',DK,15),{ah:'C'}));}}
+  const body={
+    about,
+    need:(P.needs||[]).join('\n'),
+    bring:(me.skills||[]).slice(0,4).join('\n'),
+    requests:`${ST.pjAsked} students asked to join:\n`+people.slice(0,ST.pjAsked).map(it=>`${it.person.name} · ${it.person.skill}`).join('\n'),
+    budget:ST.budget!==''&&ST.budget!=null?`${fmtNum(ST.budget)} nis`:'Not set yet',
+    timeline:null,
+  };
+  for(const key of Object.keys(PJ_TITLE)){
+    const [x,y,w,h,cr]=at(key),on=key===open;k.push(tile('pj-'+key,x,y,w,h,on?A:T,cr||4,tap(key)));
+    const l=lbl('pj-'+key+'-l',x+13,y+11,Math.max(40,w-26),PJ_TITLE[key],on?DK:A,16);l.h=40;k.push(l);
+    // closed tiles still show one short fact where there is room
+    if(!on&&key==='requests'&&h>=100){const v=lbl('pj-req-n',x+13,y+h-60,100,String(ST.pjAsked),A,40);v.h=48;k.push(v);}
+    if(!on&&key==='budget'&&h>=90){const v=lbl('pj-bud-n',x+13,y+h-34,w-26,body.budget,A,14,'Regular');k.push(v);}
+    if(!on)continue;
+    if(key==='timeline'){
+      const stages=['Pitch','Crew','Work','Review','Done'],now=1;
+      stages.forEach((st,i)=>{const sy=y+38+i*Math.min(26,(h-48)/5);const done=i<now,cur2=i===now;
+        k.push({n:'pj-st-'+i,y:'RE',x:x+13,Y:sy+5,w:cur2?27:18,h:cur2?9:3,cr:2,f:[{t:'S',c:i<=now?DK:'#ffffff',o:1}],fixc:1});
+        const sl=lbl('pj-st-l'+i,x+50,sy,w-70,st+(cur2?' · now':''),i<=now?DK:'#ffffff',15,cur2?'Bold':'Regular');k.push(sl);});
+      const due=ST.due?`Due ${ST.due.getDate()} ${MON3[ST.due.getMonth()]} ${ST.due.getFullYear()}`:'No due date yet';
+      const dl=lbl('pj-due',x+130,y+11,w-143,due,DK,15,'Regular');dl.ah='R';k.push(dl);
+    } else {const v=lbl('pj-'+key+'-v',x+13,y+(w>200?40:44),w-26,body[key],DK,16,'Regular');v.h=h-56;v.sg[0][7]='%125';k.push(v);}
+  }
+  k.push({n:'home-btn',y:'GR',g:'a0o6sp30d',x:169,Y:507,w:65,h:65,cr:4,r:HOME_TAP()});
+  f.k=[...k,...keep];f.r=[{t:'ON_DRAG',a:[{n:'APP',f:'back',tr:{dir:'RIGHT'}}]}];
+  const id=addFrame('PJ:summary',f);N[id].back=1;N[id].fam='project';return id;
+}
+ROUTE['PJ:summary']=()=>{ST.pjOpen=null;return projectFrame();};
+N['PJ:summary']={i:'PJ:summary',y:'FR',n:'project',k:[],w:402,h:874,x:0,Y:0};POP_FAMILY['PJ:summary']='project';
+
+/* ---------- Chats: a grid of faces, like "Choose Your Avatar"; each one is a conversation you had ---------- */
+chatsFrame=function(){
+  const A=accent(),T=tintOf(A);const f=clone(N['709:27721']);
+  const keep=f.k.filter(c=>c.n==='Status bar'||/^Choose Your/.test(c.n||c.ch||''));
+  const title=keep.find(c=>c.y==='TE');
+  if(title){const a='Your\n',b='Chats';title.ch=a+b;title.sg=[[0,a.length,...title.sg[0].slice(2)],[a.length,a.length+b.length,...title.sg[title.sg.length-1].slice(2)]];title.sg[0][5]='#d8d8d8';title.sg[1][5]='#3361ff';}
+  const talked=CHATS.filter(c=>ST.chat&&ST.chat[c.id]&&ST.chat[c.id].log.some(m=>m.from==='me'));
+  const rest=CHATS.filter(c=>!talked.includes(c));const list=[...talked,...rest].slice(0,14);
+  const k=[];let i=0;
+  for(let r=0;r<5;r++)for(let col=0;col<3;col++){
+    if(r===2&&col===1){const p=cell(2,1);k.push({n:'home-btn',y:'GR',g:'a0o6sp30d',x:p.x,Y:p.Y,w:p.w,h:p.h,cr:4,r:HOME_TAP()});continue;}
+    const c=list[i++];if(!c)continue;const p=cell(r,col);const cp=chatPerson(c);const colr=c.color||A;
+    k.push({n:'chat-'+c.id,y:'RE',x:p.x,Y:p.Y,w:p.w,h:p.h,cr:p.cr,f:[{t:'S',c:colr,o:1}],fixc:1,r:act({f:'chat',id:c.id})});
+    const g=cp.g||faceFor(cp.name||c.id);const av={n:'chat-'+c.id+'-g',y:'GR',g,fit:1};fitAvatar(av,{x:p.x,Y:p.Y,w:p.w,h:p.h});av.r=act({f:'chat',id:c.id});k.push(av);
+    const s=ST.chat&&ST.chat[c.id];const last=s?s.log[s.log.length-1]:{from:'in'};
+    if(!s||(last.from==='in'&&!s.read))k.push({n:'chat-'+c.id+'-dot',y:'RE',x:p.x+p.w-20,Y:p.Y+10,w:10,h:10,cr:5,f:[{t:'S',c:lum(colr)>.5?mix(colr,'#000000',.6):'#ffffff',o:1}],fixc:1});
+  }
+  const si=keep.findIndex(c=>c.n==='Status bar');f.k=[...keep.slice(0,si),...k,...keep.slice(si)];f.r=[];
+  const id=addFrame('C:chats',f);N[id].back=1;N[id].fam='chats';return id;
+};
+ROUTE['C:list']=chatsFrame;
+</script>
+<script>
+/* ======================================================================
+   Part 17 — TAU in "Where are you studying", Chats without your own
+   avatar, the back arrow on "Grow your portfolio", and a new message
+   notification every 2 minutes (Figma: the banner on top of the screen).
+   ====================================================================== */
+function prepPart17(){
+  // TAU: a fourth pill in the college picker
+  const vs=Object.keys(COMP).filter(k=>SETOF[k]===COLLEGE_SET).map(k=>COMP[k]);const byS=s=>vs.find(v=>v.vp&&v.vp.State===s);
+  const open=byS('Open'),hit=byS('HIT');if(!open||!hit||open.k.some(c=>c.n==='pill-tau'))return;
+  const txt0=hit.k.find(c=>c.n==='txt-hit'),fs=txt0.sg[0][4],tw=Math.ceil(textW('TAU',fs,700))+1;
+  const tauV=clone(hit);tauV.i='C:TAU';tauV.vp={State:'TAU'};tauV.n='State=TAU';COMP['C:TAU']=tauV;SETOF['C:TAU']=COLLEGE_SET;
+  for(const v of vs.concat([tauV])){const p=clone(v.k.find(c=>c.n==='pill-hit')),t=clone(v.k.find(c=>c.n==='txt-hit'));p.n='pill-tau';t.n='txt-tau';tx(t,'TAU');t.w=tw;t.o=0;delete p.r;delete t.r;
+    const pi=v.k.findIndex(c=>c.n==='pill-bezalel');v.k.splice(pi+1,0,p);const ti=v.k.findIndex(c=>c.n==='txt-bezalel');v.k.splice(ti+1,0,t);}
+  {const p=open.k.find(c=>c.n==='pill-tau'),t=open.k.find(c=>c.n==='txt-tau'),b=open.k.find(c=>c.n==='pill-bezalel'),tb=open.k.find(c=>c.n==='txt-bezalel');
+    p.x=b.x+b.w+12;p.w=tw+32;t.x=p.x+16;t.o=1;const r=clone(b.r);for(const a of r[0].a)a.d='C:TAU';p.r=r;t.r=clone(r);
+    const pen=open.k.find(c=>c.n==='icon-pen');if(pen)pen.x=p.x+p.w-30;}
+  {const w=16+tw+14+18+16;for(const c of tauV.k){if(/^pill-/.test(c.n)){c.x=0;c.w=w;} if(/^txt-/.test(c.n))c.o=c.n==='txt-tau'?1:0;}
+    const pen=tauV.k.find(c=>c.n==='icon-pen');if(pen)pen.x=w-34;}
+  if(!COLLEGES.includes('TAU'))COLLEGES.push('TAU');
+  // Grow your portfolio: the back arrow, title in line with the other screens
+  for(const id of ['732:31854','732:31857','732:31985'])if(N[id])N[id].back=1;
+}
+const _oc17=APP.onChange;
+APP.onChange=(ne,dest)=>{_oc17(ne,dest);const st=COMP[dest]&&COMP[dest].vp&&COMP[dest].vp.State;if(SETOF[dest]===COLLEGE_SET&&st==='TAU')ST.college='TAU';};
+for(const id of ['732:31857','732:31985']){const fn=ROUTE[id];ROUTE[id]=()=>markBack(fn(),'grid:port');}
+const _si17=searchIndex;searchIndex=function(){const out=_si17();if(!out.some(r=>r.title==='TAU'))out.push({type:'college',title:'TAU',sub:'College',color:'#82d1d6',tags:'TAU Tel Aviv University college'});return out;};
+
+/* ---------- Chats: 15 faces, no avatar of your own (the arrow takes you back) ---------- */
+const _cf17=chatsFrame;
+chatsFrame=function(){
+  const id=_cf17();const f=N[id];const A=accent();
+  const order=CHATS.map(c=>[c,ST.chat&&ST.chat[c.id]]).sort((a,b)=>((b[1]&&b[1].last)||0)-((a[1]&&a[1].last)||0)).map(x=>x[0]).slice(0,15);
+  f.k=f.k.filter(c=>!/^chat-/.test(c.n)&&c.n!=='home-btn');const si=f.k.findIndex(c=>c.n==='Status bar');const k=[];
+  order.forEach((c,i)=>{const p=cell(Math.floor(i/3),i%3);const cp=chatPerson(c);const colr=c.color||A;
+    k.push({n:'chat-'+c.id,y:'RE',x:p.x,Y:p.Y,w:p.w,h:p.h,cr:p.cr,f:[{t:'S',c:colr,o:1}],fixc:1,r:act({f:'chat',id:c.id})});
+    const av={n:'chat-'+c.id+'-g',y:'GR',g:cp.g||faceFor(cp.name||c.id),fit:1};fitAvatar(av,{x:p.x,Y:p.Y,w:p.w,h:p.h});av.r=act({f:'chat',id:c.id});k.push(av);
+    const s=ST.chat&&ST.chat[c.id];const unread=!s||(!s.read&&s.log[s.log.length-1].from==='in');
+    if(unread)k.push({n:'chat-'+c.id+'-dot',y:'RE',x:p.x+p.w-20,Y:p.Y+10,w:10,h:10,cr:5,f:[{t:'S',c:lum(colr)>.5?mix(colr,'#000000',.6):'#ffffff',o:1}],fixc:1});});
+  f.k.splice(si<0?f.k.length:si,0,...k);return id;
+};
+ROUTE['C:list']=chatsFrame;
+// opening a chat marks it read (the dot goes away when you come back)
+const _cfr17=chatFrame;chatFrame=function(id){const s=chatState(id);s.read=1;s.last=s.last||Date.now();return _cfr17(id);};
+
+/* ---------- notifications: a new message every 30 seconds, from the moment you reach home ---------- */
+const NOTE_OLD=['Are we still on for Thursday?','Just sent you the files ✦','Did you get a chance to look at my sketches?','Quick question about the colours, got a sec?','Loved your last version!','Can you send me the logo in black too?'];
+const NOTE_NEW=['Hi, how is it going? Saw your portfolio and loved it','Hey! I\'m looking for someone with your skills for my project','Hi! Want to join my crew this semester?','So excited to dive into this project together!','Yoo when are we meeting up for this first session?'];
+let NOTE_T=null,NOTE_EL=null;
+function startNotes(){if(NOTE_T)return;NOTE_T=setInterval(()=>{notify();},30000);}
+function stopNotes(){if(NOTE_T){clearInterval(NOTE_T);NOTE_T=null;}if(NOTE_EL){NOTE_EL.remove();NOTE_EL=null;}}
+function newPersonIt(){
+  const known=new Set(CHATS.map(c=>c.it&&c.it.person&&c.it.person.name).filter(Boolean));
+  const fromCrew=(()=>{try{return crewPeople().filter(it=>!known.has(it.person.name));}catch(e){return [];}})();
+  if(fromCrew.length)return fromCrew[Math.floor(Math.random()*fromCrew.length)];
+  const name=FIRSTS[Math.floor(Math.random()*FIRSTS.length)]+' '+LASTS[Math.floor(Math.random()*LASTS.length)],first=name.split(' ')[0];
+  const depts=Object.keys(DEPT_SKILLS),dept=depts[Math.floor(Math.random()*depts.length)],skill=DEPT_SKILLS[dept][Math.floor(Math.random()*15)];
+  const col=SCAN_PAL[Math.floor(Math.random()*SCAN_PAL.length)],g=faceFor(name);
+  return {color:col,person:{name,first,year:YEARS4[Math.floor(Math.random()*4)],college:COLLEGES[Math.floor(Math.random()*COLLEGES.length)],dept,skill,credits:1+Math.floor(Math.random()*4),label:name},char:{g}};
+}
+function notify(){
+  if(!cur)return;if(busy){setTimeout(notify,500);return;} // whatever screen you are on, the message comes
+  let c,msg;const people=CHATS.filter(x=>x.id!=='crew');
+  if(Math.random()<.5&&people.length){c=people[Math.floor(Math.random()*people.length)];msg=NOTE_OLD[Math.floor(Math.random()*NOTE_OLD.length)];chatState(c.id);}
+  else{const it=newPersonIt();c=chatFor(it);msg=NOTE_NEW[Math.floor(Math.random()*NOTE_NEW.length)];if(!ST.chat[c.id])ST.chat[c.id]={step:0,log:[],typing:false};}
+  const s=ST.chat[c.id];s.log.push({from:'in',t:msg});s.read=0;s.last=Date.now();
+  if(chatScreen()&&ST.chatId===c.id){s.read=1;chatRefresh(true);return;}
+  showNote(c,msg);
+}
+function showNote(c,msg){
+  if(NOTE_EL)NOTE_EL.remove();const cp=chatPerson(c),pc=c.color||accent(),bg=mix(pc,'#ffffff',.82),fg=ink(pc);
+  const n=document.createElement('div');NOTE_EL=n;n.className='note';
+  n.style.cssText=`position:absolute;left:13px;top:65px;width:377px;height:65px;border-radius:4px;background:${bg};z-index:60;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.10);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;touch-action:none`;
+  const av=document.createElement('div');av.style.cssText=`position:absolute;left:13px;top:13px;width:39px;height:39px;border-radius:4px;background:${pc};overflow:hidden`;
+  const g=cp.g||faceFor(cp.name||c.id);const im=document.createElement('img');im.src=svgUrl(g);im.alt='';im.draggable=false;
+  const [w0,h0]=svgSize(g);const sc=Math.min(39*.8/h0,39*.78/w0);im.style.cssText=`position:absolute;width:${w0*sc}px;height:${h0*sc}px;left:${(39-w0*sc)/2}px;top:${(39-h0*sc)/2}px;pointer-events:none`;av.appendChild(im);
+  const nm=document.createElement('div');nm.textContent=cp.name||c.sub||'';nm.style.cssText=`position:absolute;left:65px;top:10px;width:299px;font:700 16px/19px "Helvetica Neue",Helvetica,Arial,sans-serif;color:${fg};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`;
+  const tx2=document.createElement('div');tx2.textContent=msg;tx2.style.cssText=`position:absolute;left:65px;top:35px;width:299px;font:400 16px/19px "Helvetica Neue",Helvetica,Arial,sans-serif;color:${fg};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`;
+  n.append(av,nm,tx2);phone.appendChild(n);
+  const ein=springEase(1,180,20,.55);if(!RM)n.animate([{transform:'translateY(-140px)'},{transform:'none'}],{duration:550,easing:ein});
+  const hide=()=>{if(NOTE_EL!==n)return;NOTE_EL=null;if(RM){n.remove();return;}n.animate([{transform:'none'},{transform:'translateY(-140px)'}],{duration:320,easing:'cubic-bezier(.4,0,1,1)',fill:'forwards'}).onfinish=()=>n.remove();};
+  let t=setTimeout(hide,4500),y0=null;
+  n.addEventListener('pointerdown',e=>{e.stopPropagation();y0=e.clientY;});
+  n.addEventListener('pointerup',e=>{e.stopPropagation();const dy=e.clientY-(y0==null?e.clientY:y0);y0=null;clearTimeout(t);
+    if(dy<-15){hide();return;} hide();ST.chatDraft='';show(chatFrame(c.id),{...GENTLE});});
+  n.addEventListener('touchend',e=>e.stopPropagation());
+}
+const _show17=show;show=function(id,tr,isBack){_show17(id,tr,isBack);if(cur&&[MENU,HOME].includes(baseOf(cur._fid)))startNotes();};
+</script>
 <style>
 html.app-dark #phone{background:#242424}
 html.app-dark body.onphone{background:#242424}
@@ -2760,14 +2967,14 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v30';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v35';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
 <script>
 /* ---------- flow controls & boot ---------- */
 let flow='f1';
-function resetState(){HIST.length=0;CREW=null;Object.assign(ST,{need:null,missingList:null,credits:3,led:2,joined:5,chat:null,editFrom:null,q:'',skills:null,prefs:null,year:'',first:'',last:'',email:'',insta:'',folio:'',about:'',budget:'',due:null,padOpen:false,focus:null,college:'',dept:'',accent:null,avatar:null,active:'first',shift:false,grids:{}});}
+function resetState(){HIST.length=0;if(typeof stopNotes==='function')stopNotes();CREW=null;Object.assign(ST,{pjAsked:null,pjOpen:null,need:null,missingList:null,credits:3,led:2,joined:5,chat:null,editFrom:null,q:'',skills:null,prefs:null,year:'',first:'',last:'',email:'',insta:'',folio:'',about:'',budget:'',due:null,padOpen:false,focus:null,college:'',dept:'',accent:null,avatar:null,active:'first',shift:false,grids:{}});}
 function start(f){flow=f;for(const k of ['f1','f2'])document.getElementById(k).setAttribute('aria-pressed',k===f);
   resetState();if(cur){cur.remove();cur=null;}busy=false;show(FLOWS[f]);}
 document.getElementById('f1').onclick=()=>start('f1');
@@ -2778,7 +2985,7 @@ window.__lorem={show:id=>{if(cur){cur.remove();cur=null;}busy=false;clearTimers(
   try{
     const [n,s]=await Promise.all([fetch('nodes.json').then(r=>r.json()),fetch('svg.json').then(r=>r.json())]);
     N=n;SVG=s;prepShadows();for(const o of Object.values(N))indexComps(o,null);
-    prep();prepRoutes();prepOnboarding();prepProject();prepPart4();prepPart5();prepPart6();prepPart7();prepPart14();
+    prep();prepRoutes();prepOnboarding();prepProject();prepPart4();prepPart5();prepPart6();prepPart7();prepPart14();prepPart16();prepPart17();
     fetch('splash.mp4').then(r=>{if(!r.ok)throw 0;return r.blob();}).then(b=>{VIDEO=URL.createObjectURL(b);}).catch(()=>{VIDEO=null;});
     fetch('poster.png').then(r=>{if(!r.ok)throw 0;return r.blob();}).then(b=>{POSTER=URL.createObjectURL(b);}).catch(()=>{});
     document.getElementById('msg').remove();
