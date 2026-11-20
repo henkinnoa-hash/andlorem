@@ -924,7 +924,7 @@ function layoutTF(f,st,C,val){
   const pill=child(f,C.pill),btn=child(f,'pill-btn'),v=child(f,C.val),chk=child(f,'icon-check'),pen=child(f,'icon-pen');
   if(!pill||!btn||!v)return;const typing=st==='Typed'||st==='Empty';
   const shown=[child(f,'hint'),child(f,'placeholder')].find(e=>e&&e.style.opacity!=='0'&&getComputedStyle(e).opacity!=='0');
-  const tw=val?v._box.w:(shown?Math.ceil(textW(shown.textContent,16,700))+1:v._box.w);
+  const tw=(val&&!(st==='Start'&&shown))?v._box.w:(shown?Math.ceil(textW(shown.textContent,16,700))+1:v._box.w);
   const set=(e,x,w)=>{if(!e)return;if(x!=null){e._box.x=x;e.style.left=x+'px';}if(w!=null){e._box.w=w;e.style.width=w+'px';}};
   if(typing){const w=Math.min(286,Math.max(110,v._box.x+tw+(val?6:0)+16));set(pill,null,w);set(btn,w+12,50);set(chk,w+12+17);set(pen,w+12+16);}
   else{const w=v._box.x+tw+12+18+16;set(pill,null,w);set(btn,w-btn._box.w);set(pen,v._box.x+tw+12);set(chk,v._box.x+tw+12);}
@@ -2049,6 +2049,710 @@ function prepPart6(){
 const _act6b=APP.action;
 APP.action=(el,a)=>{ if(a.f==='edit')ST.keepOpen=true; _act6b(el,a); };
 </script>
+<script>
+/* ======================================================================
+   Part 7 — fields: grey words step aside as you type, ✓ centred in its
+   square; "Skip" on the waiting screens.
+   ====================================================================== */
+
+/* ---------- name field: "First" / "Last" disappear once you type there ---------- */
+function shiftFrom(u,d){
+  const b=u._box;
+  for(const s of [...u.parentElement.children]){ if(s===u||!s._box||!s._n)continue;const B=s._box,nm=s._n.n;
+    if(/^pill/.test(nm)&&nm!=='pill-btn'&&B.x<=b.x+.5&&B.x+B.w>=b.x-.5){B.w+=d;s.style.width=B.w+'px';}
+    else if(B.x>=b.x-.5&&!['keyboard','caret','hit'].includes(nm)){B.x+=d;s.style.left=B.x+'px';} }
+  b.x+=d;u.style.left=b.x+'px';
+}
+function unitShow(u,show){
+  if(!u)return;if(u._orig==null)u._orig=u.textContent;
+  if(!show&&!u._col){setText(u,'');shiftFrom(u,-14);u._col=1;}
+  else if(show&&u._col){shiftFrom(u,14);u._col=0;setText(u,u._orig);}
+}
+/* ---------- the ✓ (and search / go icons) sit in the middle of their square ---------- */
+function centerIcons(f){
+  const btn=child(f,'pill-btn')||child(f,'btn');if(!btn)return;const b=btn._box;
+  for(const nm of ['icon-check','icon-go','icon-search']){const i=child(f,nm);if(!i)continue;
+    const x=b.x+(b.w-i._box.w)/2,y=b.y+(b.h-i._box.h)/2;i._box.x=x;i._box.y=y;i.style.left=x+'px';i.style.top=y+'px';}
+}
+const _bf7=bindField;
+bindField=function(f){
+  _bf7(f);
+  const set=SETOF[f._inst.cur],st=stateOf(f),typing=['Empty','Edit','Typed'].includes(st);
+  if(set===NAME_SET&&typing){
+    unitShow(child(f,'unit-first'),!ST.first);unitShow(child(f,'unit-last'),!ST.last);
+    const caret=child(f,'caret'),a=child(f,ST.active==='last'?'val-last':'val-first');
+    if(caret&&a){caret._box.x=a._box.x+(a._box.w?a._box.w+2:0);caret.style.left=caret._box.x+'px';}
+  }
+  if(typing)centerIcons(f);
+};
+
+/* ---------- "Skip" on the screens that play by themselves ---------- */
+const SKIP_FR=['709:28896','709:28901','709:28907','709:28921','709:28934','709:28946','709:26424','709:26437','709:26450'];
+function prepPart7(){
+  // the layouts that come from Figma: ✓ and Describe's square button 50 × 50, the ✓ in its middle
+  for(const v of Object.values(COMP)){ if(!v.vp||!v.k)continue;
+    const area=v.k.find(c=>c.n==='area'),btn=v.k.find(c=>c.n==='btn');
+    if(area&&btn&&(v.vp.State==='Empty'||v.vp.State==='Typed')){btn.w=btn.h=50;btn.x=area.x+area.w-50;btn.Y=area.Y+area.h+13;}
+    const b=btn||v.k.find(c=>c.n==='pill-btn');if(!b)continue;
+    for(const i of v.k)if(/^icon-(check|go|search)$/.test(i.n)){i.x=b.x+(b.w-i.w)/2;i.Y=b.Y+(b.h-i.h)/2;}
+  }
+  // the intro (Welcome … Swipe … Go) skips to "Enter Your Full Name"; the "Nice to meet you" screens skip to home
+  for(const id of SKIP_FR){const f=N[id];if(!f||f.k.some(c=>c.n==='Skip'))continue;const r=act({f:'skip',d:/^709:264/.test(id)?HOME:'709:28961'});
+    const si=f.k.findIndex(c=>c.n==='Status bar');
+    const t=lbl('Skip',312,804,40,'Skip','#aeaeb2',16);t.h=20;t.r=r;
+    const hit={n:'skip-hit',y:'RE',x:292,Y:784,w:98,h:60,f:[],r};
+    f.k.splice(si<0?f.k.length:si,0,hit,t);}
+}
+const _act7=APP.action;
+APP.action=(el,a)=>{ if(a.f==='skip'){const d=a.d||HOME;show(d,d===HOME?{t:'SMART_ANIMATE',du:.77,e:'GENTLE'}:{...PUSHF});return;} _act7(el,a); };
+</script>
+<script>
+/* ======================================================================
+   Part 8 — long names shrink to fit, the splash plays once, the avatar
+   grid works like the colour grid (random characters every time).
+   ====================================================================== */
+
+/* ---------- a long name in a big title shrinks to fit the line (never wraps) ---------- */
+const NAME_LINE=/^[A-Z][\w'’-]*(?: [A-Z][\w'’-]*){0,3}$/;
+function fitNames(s){
+  for(const el of s.querySelectorAll('.n.t')){ if(!el._box||!el._n||!/^My Profile/.test(el._n.n||''))continue; // only the name on a profile (yours, theirs, settings)
+    const maxW=Math.min(el._box.w,402-13-el._box.x);
+    for(const sp of el.querySelectorAll('span')){const size=parseFloat(sp.style.fontSize);if(!(size>=28))continue;
+      const txt=sp.textContent.trim();if(!NAME_LINE.test(txt))continue;
+      const w=textW(txt,size,sp.style.fontWeight||700);if(w<=maxW)continue;
+      const k=maxW/w;sp.style.fontSize=(size*k).toFixed(2)+'px';
+      const lh=parseFloat(sp.style.lineHeight);if(lh)sp.style.lineHeight=(lh*k).toFixed(2)+'px';
+      sp.style.whiteSpace='pre';}}
+}
+/* ---------- the splash animates once; on "Welcome to &Lorem" it stays still on its last frame ---------- */
+function stillSplash(s){
+  if(baseOf(s._fid)==='709:28958')return;
+  for(const v of s.querySelectorAll('video')){
+    v.autoplay=false;v.removeAttribute('autoplay');v.play=()=>Promise.resolve();
+    const end=()=>{try{v.currentTime=Math.max(0,(v.duration||2.93)-0.05);}catch(e){}};
+    if(v.readyState>=1)end();else v.addEventListener('loadedmetadata',end,{once:true});
+  }
+}
+const _ab8=APP.afterBuild;
+APP.afterBuild=s=>{_ab8(s);fitNames(s);stillSplash(s);};
+
+/* ---------- avatars: a 3 × 5 grid of random characters, nothing chosen yet ----------
+   Exactly like "Choose Your Color": tap one and it grows, the rest fly off. */
+function avatarPool(){
+  const seen=new Set(),out=[];
+  for(const id of ['709:27721','732:31857','709:26571','AV:extra'])for(const c of (N[id]&&N[id].k)||[]){
+    if(!isChar(c)||OWN_AV.has(c.g))continue;const key=((SVG[c.g]||'').match(/fill="#[0-9A-Fa-f]{6}"/g)||[]).join('').toLowerCase();if(seen.has(key))continue;const [w,h]=svgSize(c.g);if(!w||!h||h<w*.8)continue;seen.add(key);out.push(c.g);}
+  return out;
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function avatarGrid(){
+  if(ST.grids.avatar)return ST.grids.avatar;
+  const G=gridFromFrame('avatar','709:27721','avatar');const own=G.items.own;
+  const pool=shuffle(avatarPool()).slice(0,own?14:15);const items={};const order=[];
+  pool.forEach((g,i)=>{const [w0,h0]=svgSize(g);const s=Math.min(117*.72/h0,117*.6/w0);items['t'+i]={id:'t'+i,color:'#dee6ff',char:{g,w:w0*s,h:h0*s}};order.push('t'+i);});
+  if(own){items.own=own;order.splice(7,0,'own');}
+  Object.assign(G,{items,order,sel:null,anchor:null,last:null});G.lay=layout(order,null,null);
+  ST.grids.avatar=G;return G;
+}
+R(['709:27721','709:27854','709:27987','709:28120','709:28253','709:28386','709:28519'],()=>gridFrame(avatarGrid()));
+
+/* ---------- settings: up to 6 projects you lead and 6 you join ---------- */
+const _act8=APP.action;
+APP.action=(el,a)=>{ if(a.f==='count'&&(a.k==='led'||a.k==='joined')&&a.d>0&&(ST[a.k]||0)>=6){
+    if(!RM&&el)el.animate([{transform:'none'},{transform:'translateX(-5px)'},{transform:'translateX(4px)'},{transform:'none'}],{duration:280,easing:'ease-out'});return;}
+  _act8(el,a); };
+</script>
+<script>
+/* ---------- tap a part of the progress bar to jump to that step (onboarding and pitching) ---------- */
+const STEP_TO={
+  7:['709:28921','709:28961','901:16128','709:29031','709:29157','709:28652','709:27721'],   // onboarding
+  6:['709:29362','775:36313','790:38782','790:38964','861:15321','861:15480'],               // new project (pitching)
+};
+function stepHits(s){
+  const segs=[...s.querySelectorAll('.n')].filter(e=>e._n&&/^seg-\d+$/.test(e._n.n));if(segs.length<6)return;
+  const list=STEP_TO[segs.length];if(!list)return;
+  const cur=segs.reduce((m,e)=>e._box.w>m._box.w?e:m,segs[0]);
+  for(const e of segs){const i=+e._n.n.slice(4);const d=document.createElement('div');d.className='seghit hot';d.dataset.i=i;
+    d._step={to:list[i],dir:i<+cur._n.n.slice(4)?-1:i>+cur._n.n.slice(4)?1:0};
+    d.style.cssText=`position:absolute;left:${e._box.x}px;top:${e._box.y-16}px;width:${e._box.w}px;height:${e._box.h+32}px;cursor:pointer;z-index:2`;
+    e.parentElement.appendChild(d);}
+}
+const _ab9=APP.afterBuild;
+APP.afterBuild=s=>{_ab9(s);stepHits(s);};
+const _click9=APP.click;
+APP.click=el=>{
+  if(el.classList&&el.classList.contains('seghit')){const st=el._step;if(st&&st.dir&&!busy){
+      let to=st.to;if(to==='861:15321'&&ST.budget!=='')to=FR_BUDGET;
+      show(to,st.dir<0?{...PUSHB}:{...PUSHF},st.dir<0);}
+    return true;}
+  return _click9(el);
+};
+</script>
+<script>
+/* ---------- "What is Missing?": the skills your project needs, read from how you described it ----------
+   The description is matched against what each skill is about; the 15 best fits fill the tiles.
+   Skills you already bring are left out (you don't need to look for them). */
+const SKILL_KEYS={
+  'Branding':['brand','logo','identity','name','label','company','startup','business','coffee','shop','store'],
+  'Packaging':['packag','box','label','bottle','product','shelf','jar','wrap'],
+  'Typography':['type','typeface','font','letter','poster','hebrew','title'],
+  'Lettering':['letter','hand-drawn','handwrit','calligraph','cover'],
+  'Poster Design':['poster','event','festival','exhibition','print','campaign'],
+  'Illustration':['illustrat','drawing','draw','character','children','book','comic','picture'],
+  'Character Design':['character','mascot','puppet','animation','game'],
+  'Photography':['photo','shoot','camera','lookbook','portrait','campaign','catalog','still'],
+  'Fashion Shoots':['lookbook','fashion','shoot','model','collection','campaign'],
+  'Studio Lighting':['photo','shoot','studio','still','product'],
+  'Video Editing':['video','film','reel','edit','trailer','documentary','short','teaser'],
+  'Motion Graphics':['motion','animat','video','reel','title','intro','teaser','screen'],
+  'Stop Motion':['stop-motion','stop motion','puppet','clay','short','film'],
+  '2D Animation':['animat','cartoon','short','film','character'],
+  '3D Animation':['3d','animat','render','game'],
+  'Storyboards':['film','short','story','scene','video','animat'],
+  'Sound Design':['sound','music','audio','podcast','film','video','game'],
+  'Directing':['film','short','video','documentary','music video'],
+  'UX/UI':['app','website','web','digital','interface','platform','screen','user'],
+  'Front End':['app','website','web','site','online','platform'],
+  'Web Design':['website','web','site','online','portfolio','landing'],
+  'Prototyping':['app','prototype','product','object','device','interactive'],
+  'Creative Coding':['interactive','generative','installation','code','digital','data'],
+  'Data Viz':['data','research','infographic','statistics','map','report'],
+  'Arduino':['interactive','sensor','light','installation','device','smart'],
+  'Product Design':['product','object','lamp','chair','furniture','mug','tableware','device','design object'],
+  'Materials':['material','wood','ceramic','glass','metal','recycl','sustainab','fabric'],
+  'Ceramics':['ceramic','clay','mug','tableware','pottery','vase','kiln'],
+  'Woodwork':['wood','furniture','chair','shelf','carpent'],
+  '3D Printing':['3d','print','prototype','model','object'],
+  'Rendering':['render','3d','visual','product','interior','space'],
+  'Model Making':['model','architecture','space','installation','exhibition','scale'],
+  'Interiors':['interior','space','room','store','shop','café','cafe','restaurant','exhibition'],
+  'Lighting Design':['light','lamp','lighting','installation','exhibition'],
+  'Pattern Making':['garment','dress','clothing','fashion','collection','wear','sew'],
+  'Sewing':['sew','garment','clothing','fashion','dress','bag','denim','upcycl'],
+  'Styling':['fashion','lookbook','shoot','outfit','styling','campaign'],
+  'Collection Design':['collection','fashion','capsule','line','season'],
+  'Weaving':['weav','textile','fabric','rug','loom'],
+  'Print Design':['print','pattern','textile','fabric','surface','wallpaper'],
+  'Surface Design':['pattern','surface','textile','print','tile','wallpaper'],
+  'Embroidery':['embroider','stitch','textile','fabric','denim'],
+  'Natural Dyes':['dye','natural','textile','fabric','color','colour','sustainab'],
+  'Upholstery':['sofa','upholster','chair','furniture','fabric'],
+  'Upcycling':['upcycl','recycl','second hand','denim','sustainab','waste'],
+  'Copywriting':['copy','text','slogan','campaign','story','magazine','book','words'],
+  'Editorial':['magazine','book','editorial','zine','publication','catalog','report'],
+  'Layout':['magazine','book','layout','catalog','zine','report','publication'],
+  'Social Media':['instagram','social','tiktok','content','campaign','launch','followers','reel'],
+  'Art Direction':['campaign','concept','shoot','brand','launch','visual','mood'],
+  'Visual Concepts':['concept','idea','visual','campaign','identity'],
+  'Key Art':['poster','cover','campaign','film','album','key visual'],
+  'Print Production':['print','book','magazine','poster','packag','paper'],
+};
+function missingSkills(text){
+  const t=' '+(text||'').toLowerCase()+' ';const mine=new Set((ST.skills||[]).map(s=>s.toLowerCase()));
+  const score=Object.entries(SKILL_KEYS).map(([s,keys],i)=>[s,keys.reduce((n,k)=>n+(t.includes(k)?(keys.indexOf(k)<3?2:1):0),0),i]);
+  const out=score.filter(([s,n])=>n>0&&!mine.has(s.toLowerCase())).sort((a,b)=>(b[1]-a[1])||(a[2]-b[2])).map(x=>x[0]);
+  // not enough clues: fill with what the departments around you usually look for
+  const fill=['Branding','Photography','Illustration','Motion Graphics','Copywriting','Social Media','Product Design','UX/UI','Typography','Video Editing','Packaging','Styling','Rendering','Sound Design','Print Design','Layout','Art Direction'];
+  for(const s of fill){if(out.length>=15)break;if(!out.includes(s)&&!mine.has(s.toLowerCase()))out.push(s);}
+  return out.slice(0,15);
+}
+ROUTE['790:38782']=()=>{
+  if(!(ST.about||'').trim())return '790:38782';
+  const list=missingSkills(ST.about);const f=clone(N['790:38782']);
+  const chips=f.k.filter(c=>c.y==='IN'&&/^Skill ·/.test(c.n)).sort((a,b)=>(a.Y-b.Y)||(a.x-b.x));
+  chips.forEach((c,i)=>{const t=list[i];if(!t)return;c.lab=t;for(const k of c.k||[])if(k.n==='label')tx(k,t);});
+  ST.missingList=list;return addFrame('790:38782',f);
+};
+</script>
+<script>
+/* ---------- copy & paste into the text fields ----------
+   Desktop: ⌘V / Ctrl+V pastes into the open field, ⌘C / Ctrl+C copies what is in it.
+   Phone: press and hold an open field → a small "Paste · Copy" bubble, like iOS. */
+function fieldValue(f){const set=SETOF[f._inst.cur];
+  if(set===NAME_SET)return (ST.first+' '+ST.last).trim();if(set===AREA_SET)return ST.about;return TF[set]?ST[TF[set].key]||'':'';}
+function pasteText(text){
+  text=(text||'').replace(/\r/g,'');if(!text)return;const f=liveField();
+  if(padOn(cur)){for(const ch of text)if(/\d/.test(ch))padKey(ch);return;}
+  if(!f)return;const set=SETOF[f._inst.cur];
+  for(const ch of text.slice(0,300)){
+    if(ch==='\n'||ch==='\t'){typeKey(set===AREA_SET?'space':(set===NAME_SET?'space':'tab'));continue;}
+    typeKey(ch===' '?'space':ch);
+  }
+  if(NK&&NK._set)NK._prev=NK.value=fieldText(NK._set);
+}
+document.addEventListener('paste',e=>{ if(e.target===NK)return; if(!liveField()&&!padOn(cur))return;
+  const t=e.clipboardData&&e.clipboardData.getData('text');if(t){e.preventDefault();pasteText(t);} });
+document.addEventListener('copy',e=>{ if(e.target===NK)return;const f=liveField();if(!f)return;const v=fieldValue(f);
+  if(v&&e.clipboardData){e.clipboardData.setData('text/plain',v);e.preventDefault();} });
+// press and hold on an open field: the iOS edit bubble
+let HOLD=null;
+function closeBubble(){const b=cur&&cur.querySelector('.editbubble');if(b)b.remove();}
+function openBubble(f){
+  closeBubble();const s=cur;let y=0,x=0;for(let e=f;e&&e!==s;e=e.parentElement){if(e._box){y+=e._box.y;x+=e._box.x;}}
+  const b=document.createElement('div');b.className='editbubble';
+  b.style.cssText=`position:absolute;left:${Math.max(13,x)}px;top:${Math.max(70,y-50)}px;z-index:40;display:flex;background:#242424;border-radius:8px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.18);font:600 15px/1 "Helvetica Neue",Helvetica,Arial,sans-serif`;
+  const item=(t,fn)=>{const d=document.createElement('div');d.textContent=t;d.className='ebk';d.style.cssText='color:#fff;padding:12px 16px;cursor:pointer';d._fn=fn;b.appendChild(d);};
+  item('Paste',async()=>{closeBubble();try{const t=await navigator.clipboard.readText();pasteText(t);}catch(err){/* the browser said no: nothing to paste */}});
+  if(fieldValue(f))item('Copy',async()=>{closeBubble();try{await navigator.clipboard.writeText(fieldValue(f));}catch(err){}});
+  if(b.children.length>1)b.children[0].style.borderRight='1px solid rgba(255,255,255,.25)';
+  s.appendChild(b);if(!RM)b.animate([{opacity:0,transform:'scale(.9)'},{opacity:1,transform:'none'}],{duration:160,easing:'ease-out'});
+}
+phone.addEventListener('pointerdown',e=>{
+  const k=e.target.closest&&e.target.closest('.ebk');if(k){e.preventDefault();k._fn();return;}
+  if(!(e.target.closest&&e.target.closest('.editbubble')))closeBubble();
+  clearTimeout(HOLD);const n=e.target.closest&&e.target.closest('.n');const f=n&&fieldOf(n);
+  if(!f||!['Empty','Edit','Typed'].includes(stateOf(f)))return;
+  const x0=e.clientX,y0=e.clientY;
+  HOLD=setTimeout(()=>{HOLD=null;if(down)down.dragged=true;openBubble(f);},480);
+  const cancel=ev=>{if(ev.type!=='pointermove'||Math.hypot(ev.clientX-x0,ev.clientY-y0)>10){clearTimeout(HOLD);phone.removeEventListener('pointermove',cancel);phone.removeEventListener('pointerup',cancel);}};
+  phone.addEventListener('pointermove',cancel);phone.addEventListener('pointerup',cancel);
+},true);
+phone.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('.n')&&fieldOf(e.target.closest('.n')))e.preventDefault();});
+</script>
+<script>
+/* ======================================================================
+   Part 12 — "Mission crew" is built from YOUR project: the skills it is
+   missing decide which departments light up, and each one opens a crew of
+   students (new names and faces every time) who do exactly that.
+   ====================================================================== */
+const FIRSTS=['Noga','Yael','Itay','Omer','Shira','Tal','Lior','Maayan','Daniel','Roni','Gal','Eden','Nadav','Ella','Yonatan','Mika','Ofek','Tamar','Guy','Noa','Ido','Hila','Amit','Bar','Shaked','Inbar','Yuval','Neta','Alon','Dana','Rotem','Matan','Keren','Liam','Adi','Ori','Michal','Eyal','Sapir','Ben'];
+const LASTS=['Cohen','Levi','Mizrahi','Peretz','Biton','Dahan','Avraham','Friedman','Shalev','Golan','Ben-David','Azulay','Katz','Weiss','Hadad','Barak','Segal','Oren','Harel','Navon','Rosen','Klein','Ziv','Tal','Shapira','Elkayam','Sela','Mor','Ronen','Gabay'];
+const COLLEGES=['HIT','Shenkar','Bezalel'],YEARS4=['1st','2nd','3rd','4th'];
+const EXTRA_DEPT={'Poster Design':'Visual Communication','Key Art':'Visual Communication','Print Production':'Visual Communication','Motion':'Animation',
+  'Studio Lighting':'Photography','Lighting Design':'Architecture','Creative Coding':'Coding','Data Viz':'Coding','Arduino':'Coding'};
+function deptsFor(skill){const out=Object.keys(DEPT_SKILLS).filter(d=>DEPT_SKILLS[d].includes(skill));if(!out.length&&EXTRA_DEPT[skill])out.push(EXTRA_DEPT[skill]);if(!out.length)out.push('Visual Communication');return out;}
+function crewNeeds(){
+  if(ST.need&&ST.need.length)return ST.need;
+  if((ST.about||'').trim())return (ST.missingList||missingSkills(ST.about)).slice(0,4);
+  return ['Branding','Photography','Illustration'];
+}
+let CREW=null;
+function crewPlan(){
+  const needs=crewNeeds(),key=needs.join('|')+'#'+(ST.about||'').length;if(CREW&&CREW.key===key)return CREW;
+  const by={};for(const s of needs)for(const d of deptsFor(s).slice(0,2))(by[d]=by[d]||[]).push(s);
+  const rnd=()=>Math.random();const depts={};let total=0;
+  for(const [d,sk] of Object.entries(by)){const n=Math.min(9,sk.length*2+1+Math.floor(rnd()*3));depts[d]={skills:sk,n};total+=n;}
+  CREW={key,needs,depts,total,grids:{}};return CREW;
+}
+function retitle(c,re,to){const i=c.ch.search(re);if(i<0)return;const m=c.ch.match(re)[0];const d=to.length-m.length;
+  c.ch=c.ch.slice(0,i)+to+c.ch.slice(i+m.length);c.sg=(c.sg||[]).map(s=>{s=[...s];if(s[0]>i)s[0]+=d;if(s[1]>i)s[1]+=d;return s;});}
+function crewFrame(base){
+  const P=crewPlan(),f=clone(N[base]);
+  const offLab=(f.k.find(c=>c.y==='TE'&&c.ch==='Fashion')||{}).sg;
+  for(const c of f.k){
+    if(c.y==='TE'&&/found/.test(c.ch||''))retitle(c,/\d+ found/,P.total+' found');
+    const S=STUDY[c.n];if(!S||c.y!=='RE')continue;const dept=S[0],hit=P.depts[dept];
+    const lab=f.k.find(k=>k.y==='TE'&&(k.ch||'').startsWith(dept)&&!(dept==='Visual Communication'&&/found/.test(k.ch)));
+    if(lab)tx(lab,dept);
+    if(base==='709:26483'){
+      if(hit){c.f=[{t:'S',c:S[1],o:1}];c.fixc=1;const r=act({f:'crew',d:dept});c.r=r;if(lab){lab.r=clone(r);lab.sg[0][5]=lum(S[1])>.45?S[2]:'#ffffff';}}
+      else{c.f=[{t:'S',c:'#dee6ff',o:1}];delete c.fixc;delete c.r;if(lab){delete lab.r;if(offLab)lab.sg=[[0,dept.length,...offLab[0].slice(2)]];}}
+    }
+  }
+  return addFrame(base,f);
+}
+ROUTE['709:26102']=()=>crewFrame('709:26102');
+ROUTE['709:26483']=()=>crewFrame('709:26483');
+// a crew: students of that department who do the skills your project is missing; new names and faces each time
+function crewGrid(dept){
+  const P=crewPlan();if(P.grids[dept])return P.grids[dept];
+  const G=gridFromFrame('crew-'+dept+'-'+Date.now(),'709:26571','people');
+  const mineFace=(SVG[ST.avatar||DEF_AVATAR]||'').match(/fill="#[0-9A-Fa-f]{6}"/g)?.join('').toLowerCase();
+  const faces=shuffle(avatarPool().filter(g=>((SVG[g]||'').match(/fill="#[0-9A-Fa-f]{6}"/g)||[]).join('').toLowerCase()!==mineFace)),used=new Set(Object.values(P.grids).flatMap(g=>Object.values(g.items).filter(i=>i.person).map(i=>i.person.name)));
+  const hit=P.depts[dept]||{skills:[],n:0},pool=[...hit.skills,...(DEPT_SKILLS[dept]||SKILL_POOL).filter(s=>!hit.skills.includes(s))];
+  let i=0;const its=Object.values(G.items).filter(x=>!x.own);its.sort((a,b)=>(b.id===G.sel)-(a.id===G.sel)); // the big tile is the best match
+  for(const it of its){
+    let name;for(let k=0;k<50;k++){name=FIRSTS[Math.floor(Math.random()*FIRSTS.length)]+' '+LASTS[Math.floor(Math.random()*LASTS.length)];if(!used.has(name))break;}used.add(name);
+    const first=name.split(' ')[0],year=YEARS4[Math.floor(Math.random()*4)],college=COLLEGES[Math.floor(Math.random()*3)];
+    const skill=i<hit.n?hit.skills[i%Math.max(1,hit.skills.length)]||pool[i]:pool[(i%pool.length)];
+    it.person={name,first,year,college,dept,skill,credits:1+Math.floor(Math.random()*4),label:`${first} · ${skill}`};
+    const g=faces[i%faces.length];const [w0,h0]=svgSize(g);const s=Math.min(117*.72/h0,117*.6/w0);it.char={g,w:w0*s,h:h0*s};i++;}
+  G.crew=dept;P.grids[dept]=G;ST.grids[G.name]=G;return G;
+}
+function crewGridFrame(G){
+  const id=gridFrame(G);const t=N[id].k.find(c=>c.y==='TE'&&/^Welcome to the/.test(c.ch||''));
+  if(t)retitle(t,/Visual Communication/,G.crew);
+  return id;
+}
+const _act12=APP.action;
+APP.action=(el,a)=>{
+  if(a.f==='crew'){show(crewGridFrame(crewGrid(a.d)),{t:'SMART_ANIMATE',du:1,e:'GENTLE'});return;}
+  if(a.f==='grid'&&ST.grids[a.g]&&ST.grids[a.g].crew){const G=ST.grids[a.g],it=G.items[a.id];
+    if(G.sel===a.id&&it.person){show(profileFrame(it,cur._fid),GENTLE);return;}
+    if(G.sel===a.id)return;gridSelect(G,a.id);show(crewGridFrame(G),GENTLE);return;}
+  _act12(el,a);
+};
+// the skills you tick on "What is Missing?" are what the crew is searched for
+const _oc12=APP.onChange;
+APP.onChange=(ne,dest)=>{ _oc12(ne,dest);
+  if(cur&&baseOf(cur._fid)==='790:38782'&&isChipSet(SETOF[dest]))setTimeout(()=>{
+    ST.need=[...cur.querySelectorAll('.n')].filter(e=>e._inst&&e.style.pointerEvents!=='none'&&isOn(e)).map(e=>e._inst.orig.lab||e._n.n.replace(/^Skill · /,''));},0);
+};
+</script>
+<script>
+/* ======================================================================
+   Part 13 — Search, as designed in Figma ("מסך חיפוש 1–3"):
+   "What's On Your Mind?" + a short field; as soon as you type, the title
+   shrinks, the field widens and the results pop up as a bento — faces for
+   people, named tiles for departments, skills, colleges and projects.
+   ====================================================================== */
+const S_PEOPLE=[[13,286,104,130,'#cce4bd',4],[260,494,130,117,'#d3d892',4],[13,624,156,234,'#dc8855',[4,4,4,50]],[182,728,208,130,'#ffda7c',[4,4,50,4]]];
+const S_TEXT=[[130,286,117,130,'#55729f','#233857',4],[257,286,133,195,'#b2a4ff','#614fc8',4],[13,429,234,183,'#9ad5e3','#387d8f',4],[182,624,208,91,'#ff82b6','#ab3566',4]];
+const FIELD_X=26,FIELD_Y_BIG=429,FIELD_Y=208;
+function faceFor(name){const pool=avatarPool();return pool[hashStr(name)%pool.length];}
+// everyone the app knows: the people of the departments, and the students of your mission crew
+searchIndex=function(){
+  const out=[];const seen=new Set();
+  const addPerson=it=>{const P=it.person;if(!P||seen.has(P.name))return;seen.add(P.name);
+    if(!it.char)it.char={g:faceFor(P.name)};const D=personData(it);
+    out.push({type:'person',title:D.name,sub:`${D.dept} · ${D.year} · ${D.college}`,color:D.color,g:D.g||it.char.g,tags:[D.dept,D.college,D.year+' year',...D.skills,...D.projects].join(' '),it});};
+  for(const [col,p] of Object.entries(PEOPLE)){const g=(ST.grids.dept&&Object.values(ST.grids.dept.items).find(x=>x.color&&x.color.slice(1).toLowerCase()===col));
+    addPerson(g||{color:'#'+col,person:{name:p[0],first:p[0].split(' ')[0],year:p[1],college:p[2],dept:p[3],skill:p[4],credits:p[5]},char:null});}
+  for(const G of Object.values(ST.grids))if(G.crew)for(const it of Object.values(G.items))if(it.person)addPerson(it);
+  for(const k of Object.keys(STUDY)){const [d,c]=STUDY[k];out.push({type:'dept',title:d,sub:'Department',color:c,tags:d});}
+  for(const c of ['HIT','Shenkar','Bezalel'])out.push({type:'college',title:c,sub:'College',color:'#82d1d6',tags:c+' college'});
+  for(const y of ['1st','2nd','3rd','4th'])out.push({type:'year',title:y+' year',sub:'Year of study',color:'#e9dbf3',tags:y+' year'});
+  const skills=new Set([...SKILL_POOL,...Object.values(DEPT_SKILLS).flat()]);for(const s of skills)out.push({type:'skill',title:s,sub:'Skill',color:'#ffe6ab',tags:s});
+  for(const [p,owner,d] of PROJECTS)out.push({type:'project',title:p,sub:`Project · ${owner}`,color:'#dcedbd',tags:`${p} ${owner} ${d}`,owner});
+  return out;
+};
+function rankAll(q){
+  const idx=searchIndex();q=q.trim().toLowerCase();const words=q.split(/\s+/).filter(Boolean);
+  const score=r=>{const t=r.title.toLowerCase(),tags=(r.tags||'').toLowerCase();let s=0;
+    for(const w of words){ if(t.startsWith(w))s+=10;else if(t.split(/[\s·:-]+/).some(x=>x.startsWith(w)))s+=7;else if(t.includes(w))s+=4;
+      else if(tags.split(/[\s·]+/).some(x=>x.startsWith(w)))s+=3;else if(tags.includes(w))s+=1;else return 0;}
+    return s;};
+  return idx.map(r=>[score(r),r]).filter(x=>x[0]>0).sort((a,b)=>b[0]-a[0]).map(x=>x[1]);
+}
+function searchPick(q){
+  const all=rankAll(q),idx=searchIndex();
+  const people=all.filter(r=>r.type==='person'),things=all.filter(r=>r.type!=='person');
+  // not enough matches: keep the bento full with the closest people and things (first letter first)
+  const c=q.trim().toLowerCase()[0]||'';const near=(r)=>r.title.toLowerCase().startsWith(c)?0:1;
+  for(const r of idx.filter(r=>r.type==='person'&&!people.includes(r)).sort((a,b)=>near(a)-near(b)))if(people.length<4)people.push(r);
+  for(const r of idx.filter(r=>r.type!=='person'&&r.type!=='year'&&!things.includes(r)).sort((a,b)=>near(a)-near(b)))if(things.length<4)things.push(r);
+  return {people:people.slice(0,4),things:things.slice(0,4)};
+}
+// the screen: big title + short field, or (while you search) the small title + wide field
+ROUTE['709:26157']=()=>{const f=clone(N['709:26157']);const big=!(ST.q||'').trim();
+  const t=f.k.find(c=>c.n==='Search for Anything');
+  if(t){const a=big?'What’s \nOn \n':'What’s On\n',b=big?'Your\nMind?':'Your Mind?';t.ch=a+b;
+    t.sg=[[0,a.length,'Helvetica Neue','Bold',big?64:48,'#d8d8d8',1,'%105','%0',0,0],[a.length,a.length+b.length,'Helvetica Neue','Bold',big?64:48,'#3361ff',1,'%105','%0',0,0]];
+    Object.assign(t,big?{x:26,Y:130,w:322,h:280}:{x:26,Y:89,w:337,h:93});}
+  const fld=f.k.find(c=>c.n==='Search field');if(fld){fld.x=FIELD_X;fld.Y=big?FIELD_Y_BIG:FIELD_Y;}
+  return addFrame('709:26157',f);};
+function searchMode(f){
+  const s=cur;if(!s||!f)return;const big=!(ST.q||'').trim();if(f._big===big)return;const first=f._big===undefined;f._big=big;
+  const T=[...s.children].find(e=>e._n&&e._n.n==='Search for Anything');const ease='cubic-bezier(.3,0,.1,1)';
+  const y=big?FIELD_Y_BIG:FIELD_Y;
+  const hb=[...s.children].find(e=>e._n&&e._n.n==='home-btn');
+  if(hb){const [hx,hy]=big?[169,455]:[325,96];if(!first&&!RM)hb.style.transition=`top .55s ${ease},left .55s ${ease}`;hb._box.x=hx;hb._box.y=hy;hb.style.left=hx+'px';hb.style.top=hy+'px';}
+  if(!first&&!RM){f.style.transition=`top .55s ${ease}`;}f._box.y=y;f.style.top=y+'px';
+  if(T){const sp=T.querySelectorAll('span');const size=big?64:48;
+    if(!first&&!RM){T.style.transition=`top .55s ${ease},left .55s ${ease},width .55s ${ease}`;sp.forEach(x=>x.style.transition=`font-size .55s ${ease},line-height .55s ${ease}`);}
+    Object.assign(T._box,big?{x:26,y:130,w:322}:{x:26,y:89,w:337});T.style.left=T._box.x+'px';T.style.top=T._box.y+'px';T.style.width=T._box.w+'px';
+    const inn=T.firstChild;if(inn){if(!first&&!RM)inn.style.transition=`line-height .55s ${ease}`;inn.style.lineHeight=(size*1.05)+'px';inn.style.fontSize=size+'px';}
+    if(sp[0]){sp[0].textContent=big?'What’s \nOn \n':'What’s On\n';sp[0].style.fontSize=size+'px';sp[0].style.lineHeight=(size*1.05)+'px';}
+    if(sp[1]){sp[1].textContent=big?'Your\nMind?':'Your Mind?';sp[1].style.fontSize=size+'px';sp[1].style.lineHeight=(size*1.05)+'px';}}
+}
+renderSearch=function(f,st){
+  {const hb=child(f,'home-btn');if(hb)hb.style.display='none';}
+  searchMode(f,st);
+  const q=ST.q||'';if(f._q===q&&f._rendered)return;f._q=q;f._rendered=1;
+  for(const e of [...f.children])if(e._n&&/^(tile|label|avatar|sr)-/.test(e._n.n))e.remove();
+  f._res=[];if(!q.trim())return;
+  const kb=child(f,'keyboard');const put=el=>{if(kb)f.insertBefore(el,kb);else f.appendChild(el);};
+  const {people,things}=searchPick(q);let n=0;
+  const tileEl=(i,x,y,w,h,col,cr)=>{const t=build({n:'sr-tile-'+i,y:'RE',x:x-FIELD_X,Y:y-FIELD_Y,w,h,f:[{t:'S',c:col,o:1}],cr,fixc:1});t.classList.add('hot');put(t);
+    if(!RM)t.animate([{opacity:0,transform:'scale(.6)'},{opacity:1,transform:'none'}],{duration:420,delay:(n++)*45,easing:springEase(1,220,18,.42),fill:'backwards'});return t;};
+  const usedF=new Set(),pool=avatarPool();
+  people.forEach((r,k)=>{const [x,y,w,h,col,cr]=S_PEOPLE[k];const i=f._res.push(r)-1;tileEl(i,x,y,w,h,col,cr);
+    let g=r.g||faceFor(r.title);for(let j=0;usedF.has(g)&&j<pool.length;j++)g=pool[(pool.indexOf(g)+1)%pool.length];usedF.add(g);if(r.it&&r.it.char&&r.it.char.g!==g&&!r.it.person._full)r.it.char.g=g;const av={n:'sr-face-'+i,y:'GR',g,fit:1};fitAvatar(av,{x:x-FIELD_X,Y:y-FIELD_Y,w,h});const fe=build(av);put(fe);
+    if(!RM)fe.animate([{opacity:0,transform:'scale(.6)'},{opacity:1,transform:'none'}],{duration:420,delay:(n-1)*45+40,easing:springEase(1,220,18,.42),fill:'backwards'});});
+  things.forEach((r,k)=>{const [x,y,w,h,col,ink2,cr]=S_TEXT[k];const i=f._res.push(r)-1;tileEl(i,x,y,w,h,col,cr);
+    const L=build({n:'sr-label-'+i,y:'TE',x:x-FIELD_X+12,Y:y-FIELD_Y+9,w:w-24,h:60,ch:r.title,ah:'L',av:'T',ar:'NONE',sg:[[0,r.title.length,'Helvetica Neue','Bold',16,ink2,1,'%105','%0',0,0]]});put(L);
+    if(!RM)L.animate([{opacity:0},{opacity:1}],{duration:300,delay:(n-1)*45+80,fill:'backwards'});});
+};
+// "search" (return or the square button) puts the keyboard away so all the results show; tapping the field brings it back
+function searchKb(f,hide){f._kbHidden=hide;dockKeyboard(f,stateOf(f));if(hide&&NK)NK.blur();else if(!hide&&NATIVE)nativeFocus(SEARCH_SET);}
+const _dk13=dockKeyboard;
+dockKeyboard=function(f,st){_dk13(f,st);const kb=child(f,'keyboard');if(!kb||!f._kbHidden)return;
+  let y=0;for(let e=f;e&&e._box&&!e.classList.contains('scr');e=e.parentElement)y+=e._box.y;
+  kb.style.transition='top .4s cubic-bezier(.3,0,.1,1)';kb._box.y=900-y;kb.style.top=(900-y)+'px';};
+const _tk13=typeKey;
+typeKey=function(k){const f=liveField();if(f&&SETOF[f._inst.cur]===SEARCH_SET){
+    if(k==='return'){searchKb(f,true);return true;} if(f._kbHidden)f._kbHidden=false;}
+  return _tk13(k);};
+const _click13=APP.click;
+APP.click=el=>{
+  const f=el&&el._n&&fieldOf(el);
+  if(f&&SETOF[f._inst.cur]===SEARCH_SET&&['Empty','Typed'].includes(stateOf(f))){const nm=el._n.n;
+    if(/^sr-/.test(nm))return _click13(el);
+    if(nm==='pill-btn'||/^icon-/.test(nm)){searchKb(f,true);return true;}
+    if(/^pill|^val|^caret|^hint|^placeholder/.test(nm)&&f._kbHidden){searchKb(f,false);return true;}}
+  return _click13(el);
+};
+</script>
+<script>
+/* ======================================================================
+   Part 14 — the grey back arrow, settings as designed in Figma
+   ("הגדרות"), and chats you really type in ("private message").
+   ====================================================================== */
+const CARET_SVG='<svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.7198 4.78508L7.75493 11.6103C7.62662 11.7203 7.52362 11.8568 7.453 12.0103C7.38239 12.1639 7.34583 12.3309 7.34583 12.4999C7.34583 12.6689 7.38239 12.836 7.453 12.9895C7.52362 13.1431 7.62662 13.2796 7.75493 13.3896L15.7198 20.2148C16.48 20.8661 17.6543 20.3261 17.6543 19.3251V5.67277C17.6543 4.6718 16.48 4.13176 15.7198 4.78508Z" fill="#D8D8D8"/></svg>';
+const PEN_G='1p3a40kki';
+
+/* ---------- back: a history of the screens you visited (not the onboarding) ---------- */
+const NAV=[];
+const famOf=id=>{const n=N[id];if(!n)return id;if(n.fam)return n.fam;const b=baseOf(id);if(OWN_PROFILE.includes(b)||b==='ME:closed')return 'me';return b;};
+const _show14=show;
+show=function(id,tr,isBack){
+  const from=cur&&cur._fid,fromFam=from&&famOf(from),fromNode=from&&N[from];
+  _show14(id,tr,isBack);
+  if(!cur)return;const to=cur._fid,b=baseOf(to);
+  if(b===MENU){NAV.length=0;return;}
+  if(isBack||!from||!fromNode||famOf(to)===fromFam)return;
+  const fb=baseOf(from);if(ONB.has(fb)||(fromNode.r||[]).some(r=>r.t==='AFTER_TIMEOUT')||fb===HOME||fb==='709:27226')return;
+  NAV.push({id:from,node:fromNode,fam:fromFam});if(NAV.length>30)NAV.shift();
+};
+function goBack(){
+  const here=cur&&famOf(cur._fid);
+  while(NAV.length){const e=NAV.pop();if(e.fam===here)continue;N[e.id]=N[e.id]||e.node;_show14(e.id,{...PUSHB},true);return;}
+  _show14(HOME,{t:'SMART_ANIMATE',du:.77,e:'GENTLE'});
+}
+const markBack=(id,fam)=>{if(N[id]){N[id].back=1;if(fam)N[id].fam=fam;}return id;};
+// screens that get the arrow
+const _crew14=crewFrame;crewFrame=b=>markBack(_crew14(b),'crew');
+const _cg14=crewGridFrame;crewGridFrame=G=>markBack(_cg14(G),'grid:'+G.name);
+for(const id of ['709:26571','709:26699','709:26827','709:26956']){const fn=ROUTE[id];ROUTE[id]=()=>markBack(fn(),'grid:dept');}
+{const fn=ROUTE['709:26157'];ROUTE['709:26157']=()=>{const id=markBack(fn(),'search');N[id].arrow=[19,62];return id;};}
+const _pfam14=profileFamily;profileFamily=function(D){const ids=_pfam14(D);if(!D.me)for(const id of Object.values(ids)){N[id].back=1;N[id].fam='prof:'+D.name;}return ids;};
+const _pf14=profileFrame;profileFrame=function(it,b){const id=_pf14(it,b);if(N[id]&&!N[id].fam){N[id].back=1;N[id].fam='prof:'+it.person.name;}return id;};
+function prepPart14(){
+  SVG['xcaret']=CARET_SVG;
+  // search: the magnifier square ends on the grid's right edge (390), the field fills up to 10px before it
+  for(const k of Object.keys(COMP))if(SETOF[k]===SEARCH_SET&&COMP[k].vp&&['Empty','Typed'].includes(COMP[k].vp.State)){const v=COMP[k];const b=v.k.find(c=>c.n==='pill-btn'),pl=v.k.find(c=>c.n==='pill-search');
+    if(b&&pl){const ow=b.w,ox=b.x;b.w=53;b.x=297;pl.w=287;for(const c of v.k)if(/^icon-/.test(c.n))c.x=297+(53-c.w)/2;}}
+  for(const id of ['709:27085','709:27123','709:27161'])if(N[id]){N[id].back=1;N[id].fam='prof:Amit Alharizi';}
+  for(const id of ['732:32113','732:32152','732:32191','732:32231','732:32270','732:32309'])if(N[id]){N[id].back=1;N[id].fam='prof:Karin Eldar';}
+  for(const id of ['709:26483','709:26102'])if(N[id])N[id].back=1;
+}
+// the arrow itself, top left (Figma: 6,66 · 25×25); big titles step down a little to make room
+function addBack(s){
+  const n=N[s._fid];if(!n||!n.back)return;const ax=n.arrow?n.arrow[0]:6,ay=n.arrow?n.arrow[1]:66;
+  if(!n.arrow)  for(const e of [...s.children])if(e._n&&e._n.y==='TE'&&e._box.y>=80&&e._box.y<102&&e._box.x<40){e._box.y=102;e.style.top='102px';}
+  const r=act({f:'back'});
+  const hit=build({n:'back-hit',y:'RE',x:0,Y:ay-14,w:ax+50,h:52,f:[],r});const arrow=build({n:'back-btn',y:'GR',g:'xcaret',x:ax,Y:ay,w:25,h:25,r});
+  const sb=[...s.children].find(e=>e._n&&e._n.n==='Status bar');s.insertBefore(hit,sb||null);s.insertBefore(arrow,sb||null);
+}
+const _ab14=APP.afterBuild;APP.afterBuild=s=>{_ab14(s);addBack(s);chatAfterBuild(s);};
+
+/* ---------- settings (Figma "הגדרות") ---------- */
+const SL={
+  closed:{avatar:[13,221,143,143],colour:[169,221,221,143],general:[169,377,221,117],skills:[13,377,143,195],credits:[13,585,221,273,[4,4,4,50]],projects:[247,507,143,234],info:[247,754,143,104,[4,4,50,4]]},
+  skills:{avatar:[13,221,143,143],colour:[169,221,221,273],info:[247,507,143,65],skills:[13,377,143,325],general:[247,715,143,143,[4,4,50,4]],credits:[13,715,221,143,[4,4,4,50]],projects:[169,585,221,117]},
+  avatar:{avatar:[13,221,273,273],colour:[299,221,91,273],info:[247,507,143,65],skills:[13,507,143,195],general:[247,715,143,143,[4,4,50,4]],credits:[13,715,221,143,[4,4,4,50]],projects:[169,585,221,117]},
+  colour:{avatar:[13,221,143,143],colour:[169,221,221,273],info:[247,507,143,65],skills:[13,377,143,325],general:[247,715,143,143,[4,4,50,4]],credits:[13,715,221,143,[4,4,4,50]],projects:[169,585,221,117]},
+  info:{avatar:[13,221,78,78],colour:[104,221,286,78],info:[13,312,377,182],skills:[13,507,143,195],general:[169,585,221,117],credits:[13,715,377,143,[4,4,50,50]],projects:[247,507,143,65]},
+  general:{avatar:[13,221,143,143],colour:[169,221,221,130],info:[169,364,221,130],skills:[13,377,143,195],general:[13,585,377,156],credits:[13,754,377,104,[4,4,50,50]],projects:[247,507,143,65]},
+  projects:{avatar:[13,221,143,143],colour:[169,221,221,104],projects:[169,338,221,157],info:[169,585,221,273,[4,4,50,4]],skills:[13,377,143,195],general:[13,585,143,273,[4,4,4,50]],credits:[247,507,143,65]},
+  credits:{avatar:[13,221,143,143],colour:[169,221,221,130],info:[169,364,221,130],skills:[13,377,143,195],credits:[13,585,377,156],general:[13,754,377,104,[4,4,50,50]],projects:[247,507,143,65]},
+};
+const ST_TITLE={colour:'App Lead\nColor',skills:'My\nSkills',general:'General Details',credits:'Credits',projects:'Projects',info:'Info'};
+settingsFrame=function(){
+  const A=accent(),T=tintOf(A),DK=mix(A,'#000000',.45),D=meData(),open=ST.setOpen||null,L=SL[open||'closed'];
+  const f=clone(N['709:26284']);const keep=f.k.filter(c=>c.n==='Status bar'||/^My Profile/.test(c.ch||''));
+  const title=keep.find(c=>/^My Profile/.test(c.ch||''));
+  if(title){const a='Settings\n',b=D.name;title.ch=a+b;title.x=13;title.Y=102;title.w=377;title.h=100;
+    title.sg=[[0,a.length,'Helvetica Neue','Bold',48,'#d8d8d8',1,'%105','%0',0,0],[a.length,title.ch.length,'Helvetica Neue','Bold',48,'#3361ff',1,'%105','%0',0,0]];}
+  const k=[];const tap=key=>act({f:'sopen',k:key});const go=(d,from)=>[{t:'ON_CLICK',a:[{n:'APP',f:'edit',d,from}]}];
+  const pen=(x,y,r)=>k.push({n:'s-pen',y:'GR',g:PEN_G,x,Y:y,w:18,h:18,r});
+  // avatar: the picture only
+  {const [x,y,w,h]=L.avatar,on=open==='avatar';k.push(tile('s-avatar',x,y,w,h,on?A:T,4,tap('avatar')));
+    const av={n:'s-avatar-g',y:'GR',g:ST.avatar||DEF_AVATAR,fit:1};fitAvatar(av,{x,Y:y,w,h});k.push(av);
+    if(on)pen(x+w-36,y+h-33,go('709:27721','709:27721'));}
+  for(const key of Object.keys(ST_TITLE)){
+    const [x,y,w,h,cr]=L[key],on=key===open;
+    k.push(tile('s-'+key,x,y,w,h,on?A:T,cr||4,tap(key)));
+    const l=lbl('s-'+key+'-l',x+13,y+11,Math.max(40,w-26),ST_TITLE[key],on?DK:A,16);l.h=40;k.push(l);
+    if(!on)continue;
+    const x2=x+w,yb=y+h;
+    if(key==='colour')pen(x2-34,yb-31,go('709:28883','709:28652'));
+    if(key==='skills'){(D.skills||[]).slice(0,4).forEach((s,i)=>{const t=lbl('s-sk-'+i,x+13,y+157+i*34,w-20,s,DK,16);t.h=30;k.push(t);});pen(x+112,yb-31,go('709:29101','709:29101'));}
+    if(key==='info'){const t=lbl('s-info-v',x+13,y+39,w-26,profileTexts(D).About,DK,16,'Regular');t.h=h-60;t.sg[0][7]='%120';k.push(t);pen(x2-31,yb-31,go('709:28996','901:16128'));}
+    if(key==='general'){const t=lbl('s-general-v',x+13,y+37,w-26,`${D.dept} · ${D.college} · ${D.year} year\n${D.email}\n${D.link}\n${D.insta}`,DK,16,'Regular');t.h=h-50;t.sg[0][7]='%115';k.push(t);pen(x2-31,yb-31,go('709:28996','901:16128'));}
+    if(key==='credits'){const n=lbl('s-credits-v',x+13,yb-70,150,String(ST.credits),DK,56);n.h=64;k.push(n);
+      [['−',-1,108],['+',1,50]].forEach(([sym,d,off])=>{k.push(tile('s-credits-'+(d<0?'m':'p'),x2-13-off,yb-63,50,50,'#ffffff',4,act({f:'count',k:'credits',d})),Object.assign(lbl('s-credits-'+(d<0?'ml':'pl'),x2-13-off,yb-50,50,sym,DK,22),{ah:'C'}));});}
+    if(key==='projects'){
+      [['joined','I Joined',89],['led','I led',128]].forEach(([kk,t,dy])=>{const ty=y+dy;const l2=lbl('s-'+kk+'-t',x+13,ty,70,t,DK,16);l2.h=20;k.push(l2);
+        const v=Math.max(0,Math.min(6,ST[kk]||0));let sx=x+78;
+        for(let i=0;i<6;i++){const knob=i===v-1,w2=knob?27:18,h2=knob?9:3;
+          k.push({n:'meter-'+kk+'-'+i,y:'RE',x:sx,Y:ty+8-h2/2+(knob?0:0),w:w2,h:h2,cr:h2/2,f:[{t:'S',c:i<v?DK:T,o:1}],fixc:1,r:act({f:'meter',k:kk,v:knob?i:i+1})});
+          k.push({n:'meter-hit-'+kk+'-'+i,y:'RE',x:sx-1,Y:ty-6,w:w2+2,h:28,f:[],r:act({f:'meter',k:kk,v:knob?i:i+1})});
+          sx+=w2+2.6;}});}
+  }
+  k.push({n:'home-btn',y:'GR',g:'a0o6sp30d',x:169,Y:507,w:65,h:65,cr:4,r:HOME_TAP()});
+  const si=keep.findIndex(c=>c.n==='Status bar');f.k=[...keep.slice(0,si),...k,...keep.slice(si)];
+  f.r=[{t:'ON_DRAG',a:[{n:'APP',f:'back',tr:{dir:'RIGHT'}}]}];
+  const id=addFrame('709:26284',f);N[id].back=1;N[id].fam='settings';return id;
+};
+ROUTE[SETTINGS_ID]=()=>{if(!ST.keepOpen)ST.setOpen=null;ST.keepOpen=false;return settingsFrame();};
+
+/* ---------- chats: type, send, and they answer ---------- */
+function chatAuto(c,text){
+  const D=c.it?personData(c.it):null,me=meData(),t=text.toLowerCase(),first=me.first;
+  const sk=D?D.skills:['Branding','Typography'],proj=D?D.projects[0]:'our project';
+  const R=[
+    [/(project|idea|concept)/,[`I'm deep into "${proj}" right now. Want to see where it's at?`,`Tell me about yours! I love projects with a strong concept.`]],
+    [/(when|time|meet|call|zoom|thursday|sunday|tomorrow|today)/,[`Thursday at 18:00 works for me.`,`How about Sunday, 10:00 at the studio?`]],
+    [/(credit|points)/,[`It counts as 1 credit, and I still need ${D?D.credits:2} this semester.`]],
+    [/(portfolio|behance|insta|work)/,[`Sure! ${D?D.link:'behance.net'} 🙂`,`Sending you my portfolio tonight.`]],
+    [/(skill|can you|do you|know how)/,[`I mostly do ${sk[0]} and ${sk[1]||sk[0]}.`,`${sk[0]} is my thing, happy to help with it.`]],
+    [/(thank|thx|appreciate)/,[`Anytime ✦`,`Of course!`]],
+    [/(yes|sure|ok|okay|great|cool|deal|perfect|sounds good)/,[`Amazing, let's do it!`,`Perfect, I'm in.`]],
+    [/(no|can't|cannot|sorry)/,[`No worries at all.`,`Totally fine, maybe next time.`]],
+    [/^(hi|hey|hello|yo|shalom)\b/,[`Hey ${first}! What's up?`,`Hi ${first} 👋 good to hear from you`]],
+    [/\?\s*$/,[`Good question, let me check and get back to you.`,`Hmm, I think so! Why?`]],
+  ];
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  for(const [re,ans] of R)if(re.test(t))return pick(ans);
+  return pick([`Love that.`,`Sounds good to me!`,`Tell me more 🙂`,`Haha, totally.`,`Ooh, I like where this is going.`]);
+}
+ST.chatDraft='';
+function chatScreen(){return cur&&baseOf(cur._fid)==='C:chat'?cur:null;}
+chatFrame=function(id){
+  const c=chatPerson(CHATS.find(z=>z.id===id));const s=chatState(id);s.read=1;ST.chatId=id;
+  const A=accent(),pc=c.color||A,pInk=ink(pc),meInk=ink(A);
+  const f=clone(N['709:26284']);const keep=f.k.filter(c2=>c2.n==='Status bar'||/^My Profile/.test(c2.ch||''));
+  const title=keep.find(c2=>/^My Profile/.test(c2.ch||''));
+  if(title){const a='Message\n',b=c.name||c.sub;title.ch=a+b;title.x=13;title.Y=102;title.w=377;title.h=80;
+    title.sg=[[0,a.length,'Helvetica Neue','Bold',32,'#d8d8d8',1,'%105','%0',0,0],[a.length,title.ch.length,'Helvetica Neue','Bold',32,c.color?pInk:'#3361ff',1,'%105','%0',0,0]];title.n='My Profile chat';}
+  const k=[];const top=221,bottom=563,gap=13;
+  const list=[...s.log];if(ST.chatDraft)list.push({from:'me',t:ST.chatDraft,draft:1});if(s.typing)list.push({from:'in',t:'• • •',typing:1});
+  const lines=t=>lineH(t,196,16);const items=[];let used=0;
+  for(let i=list.length-1;i>=0;i--){const m=list[i];const h=Math.max(39,lines(m.t)*17+22);if(used+h>bottom-top&&items.length)break;items.unshift({m,i,h});used+=h+gap;}
+  let y=top;
+  for(const it of items){const m=it.m,me=m.from==='me';const w=Math.min(221,Math.ceil(textW(m.t,16,400))+27);
+    const x=me?52:351-w;
+    k.push({n:'msg-'+it.i,y:'RE',x,Y:y,w,h:it.h,cr:4,f:[{t:'S',c:me?A:pc,o:me?.18:.16}],fixc:1,o:m.draft?.75:1});
+    const t=lbl('msg-'+it.i+'-t',x+13,y+11,w-24,m.t,me?meInk:pInk,16,m.typing?'Bold':'Regular');t.h=it.h-16;t.sg[0][7]='%106';k.push(t);
+    if(me)k.push({n:'msg-'+it.i+'-av',y:'GR',g:'a0o6sp30d',x:13,Y:y,w:26,h:26,cr:4});
+    else{k.push({n:'msg-'+it.i+'-avbg',y:'RE',x:364,Y:y,w:27,h:27,cr:4,f:[{t:'S',c:pc,o:1}],fixc:1});
+      const g=c.g||faceFor(c.name||'crew');const av={n:'msg-'+it.i+'-avg',y:'GR',g,fit:1};fitAvatar(av,{x:364,Y:y,w:27,h:27});k.push(av);}
+    if(m.draft){let ln='',last='';for(const wd of m.t.split(' ')){const tr=ln?ln+' '+wd:wd;if(textW(tr,16,400)>196&&ln){ln=wd;}else ln=tr;}last=ln;
+      k.push({n:'msg-caret',y:'RE',x:x+13+Math.min(w-26,textW(last,16,400))+1,Y:y+it.h-28,w:2,h:18,f:[{t:'S',c:meInk,o:1}],fixc:1});}
+    y+=it.h+gap;}
+  if(!ST.chatDraft&&!s.typing){const ph=lbl('chat-hint',52,Math.min(y,bottom-30),300,'Type a message…','#c7c7cc',16,'Regular');k.push(ph);}
+  const kb=clone(N['732:32348'].k.find(c2=>/Keyboard/.test(c2.n)));kb.n='keyboard';kb.r=[];k.push(kb);
+  const si=keep.findIndex(c2=>c2.n==='Status bar');f.k=[...keep.slice(0,si),...k,...keep.slice(si)];
+  f.r=[{t:'ON_DRAG',a:[{n:'APP',f:'back',tr:{dir:'RIGHT'}}]}];
+  const nid=addFrame('C:chat',f);N[nid].back=1;N[nid].fam='chat:'+id;return nid;
+};
+const _cf14=chatsFrame;chatsFrame=function(){const id=_cf14();N[id].back=1;N[id].fam='chats';
+  N[id].k=N[id].k.filter(c=>!(c.n==='home-btn'&&c.Y===429));N[id].k.push({n:'home-btn',y:'GR',g:'a0o6sp30d',x:169,Y:429,w:65,h:65,cr:4,r:HOME_TAP()});return id;};
+ROUTE['C:list']=chatsFrame;
+function chatAfterBuild(s){
+  if(baseOf(s._fid)!=='C:chat')return;addKeys(s);
+  const kb=child(s,'keyboard');if(NATIVE&&kb)kb.style.visibility='hidden';
+}
+function chatRefresh(anim){const id=ST.chatId;if(!id||!chatScreen())return;_show14(chatFrame(id),anim?{t:'SMART_ANIMATE',du:.45,e:'CUSTOM_CUBIC_BEZIER',cb:{x1:.3,y1:0,x2:.1,y2:1}}:undefined,true);}
+function chatSend(){
+  const id=ST.chatId,txt=(ST.chatDraft||'').trim();if(!id||!txt)return;const c=CHATS.find(z=>z.id===id),s=chatState(id);
+  s.log.push({from:'me',t:txt});ST.chatDraft='';if(NK&&NK._set==='CHAT')NK._prev=NK.value='';
+  chatRefresh(true);
+  setTimeout(()=>{s.typing=true;if(chatScreen()&&ST.chatId===id)chatRefresh(true);},500);
+  const answer=chatAuto(chatPerson(c),txt);
+  setTimeout(()=>{s.typing=false;s.log.push({from:'in',t:answer});if(chatScreen()&&ST.chatId===id)chatRefresh(true);},1300+Math.min(1400,answer.length*25));
+}
+function chatKey(k){
+  let d=ST.chatDraft||'';
+  if(k==='back')d=d.slice(0,-1);
+  else if(k==='return'){chatSend();return true;}
+  else if(k==='space'){if(d&&!d.endsWith(' '))d+=' ';}
+  else if(k==='shift'||k==='123'||k==='emoji'||k==='tab')return true;
+  else if(k==='.com')d+='.com';
+  else if(k.length>=1){let ch=k;if(!d.trim()||/[.!?]\s$/.test(d))ch=ch.charAt(0).toUpperCase()+ch.slice(1);d+=ch;}
+  ST.chatDraft=d.slice(0,300);chatRefresh(false);return true;
+}
+const _tk14=typeKey;
+typeKey=function(k){ if(chatScreen()&&!liveField())return chatKey(k); return _tk14(k); };
+document.addEventListener('keydown',e=>{ if(e.target===NK||e.metaKey||e.ctrlKey||e.altKey||!chatScreen())return;
+  const m={Backspace:'back',Enter:'return',' ':'space'};const k=m[e.key]||(e.key.length===1?e.key:null);if(!k)return;e.preventDefault();chatKey(k);});
+document.addEventListener('paste',e=>{ if(e.target===NK||!chatScreen())return;const t=e.clipboardData&&e.clipboardData.getData('text');if(t){e.preventDefault();ST.chatDraft=((ST.chatDraft||'')+t).slice(0,300);chatRefresh(false);} });
+// the phone's own keyboard in a chat
+phone.addEventListener('touchend',()=>{ if(!NATIVE||!chatScreen())return;
+  if(document.activeElement!==NK||NK._set!=='CHAT'){NK._set=null;nativeFocus('CHAT');NK._prev=NK.value=ST.chatDraft||'';} });
+const _act14=APP.action;
+APP.action=(el,a)=>{
+  if(a.f==='back'){goBack();return;}
+  if(a.f==='meter'){ST[a.k]=Math.max(0,Math.min(6,a.v));show(settingsFrame(),{t:'SMART_ANIMATE',du:.35,e:'EASE_OUT'});return;}
+  if(a.f==='chat'){ST.chatDraft='';show(chatFrame(a.id),{...GENTLE});return;}
+  _act14(el,a);
+};
+// "Message …" on a profile opens the chat (and the arrow brings you back to the profile)
+chatRoute=function(){const it=ST.lastPerson;const c=it&&it.person?chatFor(it):CHATS.find(x=>x.id==='karin');ST.chatDraft='';return chatFrame(c.id);};
+ROUTE['732:32348']=chatRoute;
+</script>
+<script>
+/* ======================================================================
+   Part 15 — someone else's profile (Figma "פרופיל" 932:19376): their picture
+   opens first; tap a tile and it takes the big square, the picture moves
+   into the tile's place.
+   ====================================================================== */
+const PROF_SLOTS={general:[299,221,91,273,4],active:[13,507,143,116,4],info:[247,507,143,65,4],social:[169,585,221,117,4],joined:[13,637,145,91,4],skills:[169,715,221,143,[4,4,50,4]]};
+const PROF_TITLE={general:'General\nDetails',active:'Active\nproject',info:'Info',social:'Social Media',joined:'Project\nJoined',skills:'Skills'};
+const BIG=[13,221,273,273];
+// a tile is open: like Settings — the picture steps down to a small square top-left, the open tile takes the big place beside it
+const P_OPEN_SLOTS=[[13,377,143,117,4],[247,507,143,65,4],[13,507,143,143,4],[169,585,221,273,[4,4,50,4]],[13,663,143,97,4]];
+function profLayout(open){
+  if(!open)return {pic:[...BIG,4],...PROF_SLOTS,message:[13,741,145,117,[4,4,4,50]]};
+  const L={pic:[13,221,143,143,4],[open]:[169,221,221,273,4],message:[13,773,143,85,[4,4,4,50]]};
+  Object.keys(PROF_SLOTS).filter(k=>k!==open).forEach((k,i)=>L[k]=P_OPEN_SLOTS[i]);return L;
+}
+function personFrame(it){
+  const D=personData(it),pc=D.color,open=ST.profOpen||null;
+  const soft=mix(pc,'#ffffff',.72),side=mix(pc,'#ffffff',.62),lab=lum(pc)>.5?mix(pc,'#000000',.45):mix(pc,'#000000',.15),onPc=lum(pc)>.55?mix(pc,'#000000',.62):'#ffffff';
+  const f=clone(N['709:27085']);const k=[];
+  const t='Portfolio \n& Projects\n',name=D.name;
+  k.push({n:'My Profile person',y:'TE',x:13,Y:98,w:377,h:119,ch:t+name,ah:'L',av:'T',ar:'NONE',
+    sg:[[0,t.length,'Helvetica Neue','Bold',32,'#d8d8d8',1,'%105','%0',0,0],[t.length,t.length+name.length,'Helvetica Neue','Bold',32,ink(pc),1,'%105','%0',0,0]]});
+  const tap=key=>act({f:'popen',k:key});
+  // the picture: big when nothing else is open, otherwise in the open tile's place
+  const PL=profLayout(open);
+  {const [x,y,w,h,cr]=PL.pic;
+    k.push({n:'p-pic',y:'RE',x,Y:y,w,h,cr,f:[{t:'S',c:open?soft:pc,o:1}],fixc:1,r:tap(null)});
+    const g=D.g||(it.char&&it.char.g)||faceFor(D.name);const av={n:'p-pic-g',y:'GR',g,fit:1};fitAvatar(av,{x,Y:y,w,h});av.r=tap(null);k.push(av);}
+  const body={
+    general:`${D.dept}\n${D.college} · ${D.year} year\nLooking for ${D.credits} credit${D.credits>1?'s':''}`,
+    active:`${D.projects[0]}\n${D.waiting} project${D.waiting>1?'s':''} waiting for a crew.`,
+    info:profileTexts(D).About,
+    social:`${D.insta}\n${D.link}\n${D.email}`,
+    joined:`${D.done} projects so far:\n${D.projects.slice(0,3).join('\n')}`,
+    skills:`Best skill: ${D.skill}\n${D.skills.join(' · ')}`,
+  };
+  for(const key of Object.keys(PROF_SLOTS)){
+    const on=key===open;const [x,y,w,h,cr]=PL[key];
+    k.push({n:'p-'+key,y:'RE',x,Y:y,w,h,cr,f:[{t:'S',c:on?pc:(key==='general'?side:soft),o:1}],fixc:1,r:tap(on?null:key)});
+    const L=lbl('p-'+key+'-l',x+13,y+11,w-24,on?PROF_TITLE[key].replace('\n',' '):PROF_TITLE[key],on?onPc:lab,16);L.h=40;k.push(L);
+    if(on){const B=lbl('p-'+key+'-v',x+13,y+40,w-26,body[key],onPc,16,'Regular');B.h=h-50;B.sg[0][7]='%125';k.push(B);}
+  }
+  {const [x,y,w,h,cr]=PL.message;k.push(tile('p-message',x,y,w,h,soft,cr,act({f:'pmsg'})),Object.assign(lbl('p-message-l',x+12,y+11,w-24,'Message\n'+D.first,lab,16),{h:40}));}
+  k.push({n:'home-btn',y:'GR',g:'a0o6sp30d',x:169,Y:507,w:65,h:65,cr:4,r:HOME_TAP()});
+  const sb=f.k.find(c=>c.n==='Status bar');f.k=[...k,sb].filter(Boolean);f.r=[{t:'ON_DRAG',a:[{n:'APP',f:'back',tr:{dir:'RIGHT'}}]}];
+  const id=addFrame('PR:prof',f);N[id].back=1;N[id].fam='prof:'+D.name;return id;
+}
+N['PR:prof']={i:'PR:prof',y:'FR',n:'profile',k:[],w:402,h:874,x:0,Y:0};POP_FAMILY['PR:prof']='prof';
+profileFrame=function(it,backId){
+  if(!it.person.label)it.person.label=it.person.name;
+  if(ST.profIt!==it){ST.profOpen=null;ST.profIt=it;}
+  ST.lastPerson=it;ROUTE['732:32348']=chatRoute;return personFrame(it);
+};
+const _act15=APP.action;
+APP.action=(el,a)=>{
+  if(a.f==='popen'){if(!ST.profIt)return;ST.profOpen=a.k&&ST.profOpen!==a.k?a.k:null;show(personFrame(ST.profIt),{t:'SMART_ANIMATE',du:.6,e:'GENTLE'});return;}
+  if(a.f==='pmsg'){ST.lastPerson=ST.profIt;show(chatRoute(),{...GENTLE});return;}
+  _act15(el,a);
+};
+</script>
 <style>
 html.app-dark #phone{background:#242424}
 html.app-dark body.onphone{background:#242424}
@@ -2056,14 +2760,14 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v20';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v30';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
 <script>
 /* ---------- flow controls & boot ---------- */
 let flow='f1';
-function resetState(){HIST.length=0;Object.assign(ST,{credits:3,led:2,joined:5,chat:null,editFrom:null,q:'',skills:null,prefs:null,year:'',first:'',last:'',email:'',insta:'',folio:'',about:'',budget:'',due:null,padOpen:false,focus:null,college:'',dept:'',accent:null,avatar:null,active:'first',shift:false,grids:{}});}
+function resetState(){HIST.length=0;CREW=null;Object.assign(ST,{need:null,missingList:null,credits:3,led:2,joined:5,chat:null,editFrom:null,q:'',skills:null,prefs:null,year:'',first:'',last:'',email:'',insta:'',folio:'',about:'',budget:'',due:null,padOpen:false,focus:null,college:'',dept:'',accent:null,avatar:null,active:'first',shift:false,grids:{}});}
 function start(f){flow=f;for(const k of ['f1','f2'])document.getElementById(k).setAttribute('aria-pressed',k===f);
   resetState();if(cur){cur.remove();cur=null;}busy=false;show(FLOWS[f]);}
 document.getElementById('f1').onclick=()=>start('f1');
@@ -2074,7 +2778,7 @@ window.__lorem={show:id=>{if(cur){cur.remove();cur=null;}busy=false;clearTimers(
   try{
     const [n,s]=await Promise.all([fetch('nodes.json').then(r=>r.json()),fetch('svg.json').then(r=>r.json())]);
     N=n;SVG=s;prepShadows();for(const o of Object.values(N))indexComps(o,null);
-    prep();prepRoutes();prepOnboarding();prepProject();prepPart4();prepPart5();prepPart6();
+    prep();prepRoutes();prepOnboarding();prepProject();prepPart4();prepPart5();prepPart6();prepPart7();prepPart14();
     fetch('splash.mp4').then(r=>{if(!r.ok)throw 0;return r.blob();}).then(b=>{VIDEO=URL.createObjectURL(b);}).catch(()=>{VIDEO=null;});
     fetch('poster.png').then(r=>{if(!r.ok)throw 0;return r.blob();}).then(b=>{POSTER=URL.createObjectURL(b);}).catch(()=>{});
     document.getElementById('msg').remove();
