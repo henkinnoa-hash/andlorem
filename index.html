@@ -3506,7 +3506,7 @@ APP.mapFill=(hex,o)=>{ if(!ST.accent)return _mf21(hex,o);const h=(hex||'').toLow
   if(o&&o.pr&&h==='#242424')return P.strong;
   return _mf21(hex,o); };
 // other people's screens keep THEIR colours: your colour never repaints their text
-const OTHERS_FR=new Set(['PR:prof','C:chat','C:chats','709:26157']);
+const OTHERS_FR=new Set(['PR:prof','C:chat','C:chats']);
 APP.mapText=(hex,size,o)=>{ const h=(hex||'').toLowerCase();if(GREYS.has(h))return '#c8c8c8';
   if(OTHERS_FR.has(BUILD_FID))return hex;
   if(!ST.accent)return _mt21(hex,size,o);const P=P_();
@@ -3611,7 +3611,7 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v44';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v45';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
