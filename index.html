@@ -3576,6 +3576,34 @@ const _si21=searchIndex;searchIndex=function(){const out=_si21();const n=typedNa
     out.unshift(it._sr);}
   return out;};
 </script>
+<script>
+/* ---------- every text (and icon) on your colour's tones takes the text colour set for that tone ----------
+   Fields, chips and tiles in your colour: on the light tone the text is its Figma text colour, on the strong
+   tone its own. Hints and placeholders use the same colour, softer. Home, departments and other people's
+   screens keep their own designed colours. */
+const KEEP_FR=new Set([MENU,HOME,'709:26483','709:26102','709:28652','709:29157','709:29186','709:29215','709:29244','709:29273','709:29302',...OTHERS_FR]);
+const INKSVG={};
+function svgIn(g,col){const k=g+col;if(INKSVG[k])return INKSVG[k];const s=(SVG[g]||'').replace(/(fill|stroke)="#[0-9A-Fa-f]{6}"/g,`$1="${col}"`);
+  return INKSVG[k]=URL.createObjectURL(new Blob([s],{type:'image/svg+xml'}));}
+function paletteInk(s){
+  if(!s||!ST.accent||KEEP_FR.has(baseOf(s._fid)))return;const P=P_();
+  const tones={[P.strong.toLowerCase()]:P.strongInk,[P.tint.toLowerCase()]:P.tintInk};
+  const abs=e=>{let x=0,y=0;for(let n=e;n&&n!==s;n=n.parentElement)if(n._box){x+=n._box.x;y+=n._box.y;}return {x,y,w:e._box.w,h:e._box.h};};
+  const els=[...s.querySelectorAll('.n')].filter(e=>e._box&&e.style.pointerEvents!=='none');const bgs=[];
+  els.forEach((e,i)=>{ if(e._n&&e._n.y==='TE')return;const p=parseCol(e.style.backgroundColor||e.style.backgroundImage||e.style.background);if(!p||p.a<.9)return;
+    if(e.querySelector('img.g')&&!e._n.f)return; bgs.push({e,i,c:p.c,r:abs(e)});});
+  const under=(e,i)=>{const r=abs(e),px=r.x+Math.min(8,r.w/2),py=r.y+Math.min(10,r.h/2);let bg=null;
+    for(const b of bgs){if(b.i>i&&!b.e.contains(e))continue;if(px>=b.r.x&&px<=b.r.x+b.r.w&&py>=b.r.y&&py<=b.r.y+b.r.h)bg=b;}return bg;};
+  els.forEach((e,i)=>{ if(!e._n)return;const isT=e._n.y==='TE',isIcon=/^icon-/.test(e._n.n||'');if(!isT&&!isIcon)return;
+    const bg=under(e,i);if(!bg)return;const ink=tones[bg.c];if(!ink)return;
+    if(isIcon){for(const x of [e,...e.querySelectorAll('.n')]){const im=x._n&&x._n.g&&[...x.children].find(c=>c.tagName==='IMG');if(im)im.src=svgIn(x._n.g,ink);}return;}
+    for(const sp of e.querySelectorAll('span')){const t=parseCol(sp.style.color);if(!t)continue;
+      const soft=t.c==='#c8c8c8'||t.c==='#aeaeb2'||/^(placeholder|hint|unit-)/.test(e._n.n||'');
+      sp.style.color=soft?`rgba(${h2r(ink).join(',')},.55)`:ink;}});
+}
+const _ab22=APP.afterBuild;APP.afterBuild=s=>{_ab22(s);try{paletteInk(s);}catch(e){}};
+const _oc22=APP.onChange;APP.onChange=(ne,dest)=>{_oc22(ne,dest);setTimeout(()=>{try{paletteInk(cur);}catch(e){}},0);};
+</script>
 <style>
 html.app-dark #phone{background:#242424}
 html.app-dark body.onphone{background:#242424}
@@ -3583,7 +3611,7 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v43';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v44';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
