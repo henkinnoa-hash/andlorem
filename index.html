@@ -2398,7 +2398,7 @@ APP.onChange=(ne,dest)=>{ _oc12(ne,dest);
    ====================================================================== */
 const S_PEOPLE=[[13,286,104,130,'#cce4bd',4],[260,494,130,117,'#d3d892',4],[13,624,156,234,'#dc8855',[4,4,4,50]],[182,728,208,130,'#ffda7c',[4,4,50,4]]];
 const S_TEXT=[[130,286,117,130,'#55729f','#233857',4],[257,286,133,195,'#b2a4ff','#614fc8',4],[13,429,234,183,'#9ad5e3','#387d8f',4],[182,624,208,91,'#ff82b6','#ab3566',4]];
-const FIELD_X=26,FIELD_Y_BIG=429,FIELD_Y=208;
+const FIELD_X=13,FIELD_Y_BIG=429,FIELD_Y=221;
 function faceFor(name){const pool=avatarPool();return pool[hashStr(name)%pool.length];}
 // everyone the app knows: the people of the departments, and the students of your mission crew
 searchIndex=function(){
@@ -2438,7 +2438,7 @@ ROUTE['709:26157']=()=>{const f=clone(N['709:26157']);const big=!(ST.q||'').trim
   const t=f.k.find(c=>c.n==='Search for Anything');
   if(t){const a=big?'What’s \nOn \n':'What’s On\n',b=big?'Your\nMind?':'Your Mind?';t.ch=a+b;
     t.sg=[[0,a.length,'Helvetica Neue','Bold',big?64:48,'#d8d8d8',1,'%105','%0',0,0],[a.length,a.length+b.length,'Helvetica Neue','Bold',big?64:48,'#3361ff',1,'%105','%0',0,0]];
-    Object.assign(t,big?{x:26,Y:130,w:322,h:280}:{x:26,Y:89,w:337,h:93});}
+    Object.assign(t,big?{x:13,Y:102,w:335,h:280}:{x:13,Y:102,w:350,h:110});}
   const fld=f.k.find(c=>c.n==='Search field');if(fld){fld.x=FIELD_X;fld.Y=big?FIELD_Y_BIG:FIELD_Y;}
   return addFrame('709:26157',f);};
 function searchMode(f){
@@ -2450,7 +2450,7 @@ function searchMode(f){
   if(!first&&!RM){f.style.transition=`top .55s ${ease}`;}f._box.y=y;f.style.top=y+'px';
   if(T){const sp=T.querySelectorAll('span');const size=big?64:48;
     if(!first&&!RM){T.style.transition=`top .55s ${ease},left .55s ${ease},width .55s ${ease}`;sp.forEach(x=>x.style.transition=`font-size .55s ${ease},line-height .55s ${ease}`);}
-    Object.assign(T._box,big?{x:26,y:130,w:322}:{x:26,y:89,w:337});T.style.left=T._box.x+'px';T.style.top=T._box.y+'px';T.style.width=T._box.w+'px';
+    Object.assign(T._box,big?{x:13,y:102,w:335}:{x:13,y:102,w:350});T.style.left=T._box.x+'px';T.style.top=T._box.y+'px';T.style.width=T._box.w+'px';
     const inn=T.firstChild;if(inn){if(!first&&!RM)inn.style.transition=`line-height .55s ${ease}`;inn.style.lineHeight=(size*1.05)+'px';inn.style.fontSize=size+'px';}
     if(sp[0]){sp[0].textContent=big?'What’s \nOn \n':'What’s On\n';sp[0].style.fontSize=size+'px';sp[0].style.lineHeight=(size*1.05)+'px';}
     if(sp[1]){sp[1].textContent=big?'Your\nMind?':'Your Mind?';sp[1].style.fontSize=size+'px';sp[1].style.lineHeight=(size*1.05)+'px';}}
@@ -2524,14 +2524,14 @@ const markBack=(id,fam)=>{if(N[id]){N[id].back=1;if(fam)N[id].fam=fam;}return id
 const _crew14=crewFrame;crewFrame=b=>markBack(_crew14(b),'crew');
 const _cg14=crewGridFrame;crewGridFrame=G=>markBack(_cg14(G),'grid:'+G.name);
 for(const id of ['709:26571','709:26699','709:26827','709:26956']){const fn=ROUTE[id];ROUTE[id]=()=>markBack(fn(),'grid:dept');}
-{const fn=ROUTE['709:26157'];ROUTE['709:26157']=()=>{const id=markBack(fn(),'search');N[id].arrow=[19,62];return id;};}
+{const fn=ROUTE['709:26157'];ROUTE['709:26157']=()=>{const id=markBack(fn(),'search');return id;};}
 const _pfam14=profileFamily;profileFamily=function(D){const ids=_pfam14(D);if(!D.me)for(const id of Object.values(ids)){N[id].back=1;N[id].fam='prof:'+D.name;}return ids;};
 const _pf14=profileFrame;profileFrame=function(it,b){const id=_pf14(it,b);if(N[id]&&!N[id].fam){N[id].back=1;N[id].fam='prof:'+it.person.name;}return id;};
 function prepPart14(){
   SVG['xcaret']=CARET_SVG;
   // search: the magnifier square ends on the grid's right edge (390), the field fills up to 10px before it
   for(const k of Object.keys(COMP))if(SETOF[k]===SEARCH_SET&&COMP[k].vp&&['Empty','Typed'].includes(COMP[k].vp.State)){const v=COMP[k];const b=v.k.find(c=>c.n==='pill-btn'),pl=v.k.find(c=>c.n==='pill-search');
-    if(b&&pl){const ow=b.w,ox=b.x;b.w=53;b.x=297;pl.w=287;for(const c of v.k)if(/^icon-/.test(c.n))c.x=297+(53-c.w)/2;}}
+    if(b&&pl){const ow=b.w,ox=b.x;b.w=53;b.x=324;pl.w=314;for(const c of v.k)if(/^icon-/.test(c.n))c.x=324+(53-c.w)/2;}}
   for(const id of ['709:27085','709:27123','709:27161'])if(N[id]){N[id].back=1;N[id].fam='prof:Amit Alharizi';}
   for(const id of ['732:32113','732:32152','732:32191','732:32231','732:32270','732:32309'])if(N[id]){N[id].back=1;N[id].fam='prof:Karin Eldar';}
   for(const id of ['709:26483','709:26102'])if(N[id])N[id].back=1;
@@ -3666,7 +3666,7 @@ const _chf23=chatsFrame;chatsFrame=function(){const id=_chf23();SVG['xplus']=SVG
 ROUTE['C:list']=chatsFrame;
 // the new chat screen: the search screen, people only; tap someone and the chat opens
 ROUTE['C:new']=()=>{const id=ROUTE['709:26157']();ST.searchFor='chat';N[id].fam='newchat';
-  const t=N[id].k.find(c=>c.n==='Search for Anything');if(t){t.ch=t.ch.replace('What’s','Who’s');}return id;};
+  const t=N[id].k.find(c=>c.n==='Search for Anything');if(t)retitle(t,/What’s/,'Who’s');return id;};
 {const fn=ROUTE['709:26157'];ROUTE['709:26157']=()=>{ST.searchFor=null;return fn();};}
 const _sm23=searchMode;searchMode=function(f,st){_sm23(f,st);if(ST.searchFor!=='chat'||!cur)return;
   const T=[...cur.children].find(e=>e._n&&e._n.n==='Search for Anything');const sp=T&&T.querySelector('span');if(sp&&/What’s/.test(sp.textContent))sp.textContent=sp.textContent.replace('What’s','Who’s');};
@@ -3688,6 +3688,54 @@ const _act23=APP.action;APP.action=(el,a)=>{
 };
 N['C:new']={i:'C:new',y:'FR',n:'new chat',k:[],w:402,h:874,x:0,Y:0};
 </script>
+<script>
+/* ======================================================================
+   Part 24 — one place for the back arrow and the title on every screen
+   (as on "My Project"), the + on Chats on the arrow's line, Grow Your
+   Portfolio without the home button, and someone's project opening its
+   tiles exactly like My Current Project.
+   ====================================================================== */
+// every screen with the back arrow: the big title starts at x 13, top 102 (like My Project)
+const _ab24=addBack;addBack=function(s){_ab24(s);const n=N[s._fid];if(!n||!n.back)return;
+  for(const e of [...s.children]){ if(!e._n||e._n.y!=='TE'||!e._box)continue;const sp=e.querySelector('span');const fs=sp?parseFloat(sp.style.fontSize):0;
+    if(fs>=30&&e._box.y>=80&&e._box.y<145&&e._box.x<40){e._box.x=13;e._box.y=102;e.style.left='13px';e.style.top='102px';} } };
+
+// the + : the same distance from the edge as the arrow, on the arrow's line
+const PLUS2='<svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.5 2v21M2 12.5h21" stroke="#C8C8C8" stroke-width="3.4" stroke-linecap="round"/></svg>';
+const _chf24=chatsFrame;chatsFrame=function(){const id=_chf24();SVG['xplus']=PLUS2;
+  // the arrow's triangle: left edge 13.35, centre 78.5, 18.4 tall → the + mirrors it on the right
+  const p=N[id].k.find(c=>c.n==='chat-plus');if(p){const sz=18.4;p.w=p.h=sz;p.x=402-13.35-sz;p.Y=78.5-sz/2;p.fit=1;}return id;};
+ROUTE['C:list']=chatsFrame;
+
+// Grow Your Portfolio: a student in the middle instead of the home button
+const _gff24=gridFromFrame;gridFromFrame=function(name,base,kind){
+  if(name==='port'&&kind==='people'){const G=_gff24('dept-port',base,kind);G.name='port';return G;}
+  return _gff24(name,base,kind);};
+
+/* ---------- their project page opens like My Current Project ---------- */
+const PJO_KEY={crew:'avatar',project:'colour',timeline:'general',needs:'skills',asked:'credits',brings:'projects',budget:'info'};
+const _opf24=otherProjectFrame;otherProjectFrame=function(it){
+  const id=_opf24(it);const open=ST.pjoOpen;if(!open)return id;
+  const f=N[id],L=SL[PJO_KEY[open]];const pos=key=>L[PJO_KEY[key]];
+  for(const key of Object.keys(PJO_KEY)){const R=pos(key);if(!R)continue;const [x,y,w,h,cr]=R;
+    const t=f.k.find(c=>c.n==='pjo-'+key);if(!t)continue;const dx=x-t.x,dy=y-t.Y;Object.assign(t,{x,Y:y,w,h,cr:cr||4});
+    const l=f.k.find(c=>c.n==='pjo-'+key+'-l');if(l){l.x=x+13;l.Y=y+11;l.w=Math.max(40,w-26);}
+    const v=f.k.find(c=>c.n==='pjo-'+key+'-v');if(v){v.x=x+13;v.Y=y+(PJO_TITLE_LINES(key)?52:36);v.w=w-26;v.h=h-60;}
+    if(key==='crew'){const faces=f.k.filter(c=>/^pjo-face-/.test(c.n));faces.forEach((av,i)=>{fitAvatar(av,{x:x+6+(i%2)*(w-12)/2,Y:y+6+Math.floor(i/2)*(h-12)/2,w:(w-12)/2,h:(h-12)/2});});}}
+  // their face sits where the home button sits on My Current Project
+  for(const c of f.k){if(c.n==='pjo-me'){c.x=169;c.Y=507;}if(c.n==='pjo-me-g')fitAvatar(c,{x:169,Y:507,w:65,h:65});}
+  return id;};
+const PJO_TITLE_LINES=key=>key==='project'||key==='asked';
+// the crew tile opens too (the faces grow), and a second tap closes any tile
+const _act24=APP.action;APP.action=(el,a)=>{
+  if(a.f==='pjo'){ST.pjoOpen=ST.pjoOpen===a.k?null:a.k;if(ST.profIt)show(otherProjectFrame(ST.profIt),{t:'SMART_ANIMATE',du:.6,e:'GENTLE'});return;}
+  _act24(el,a);};
+const _opf24b=otherProjectFrame;otherProjectFrame=function(it){const id=_opf24b(it);
+  const c=N[id].k.find(x=>x.n==='pjo-crew');if(c)c.r=act({f:'pjo',k:'crew'});
+  for(const x of N[id].k)if(/^pjo-face-/.test(x.n))x.r=act({f:'pjo',k:'crew'});
+  if(ST.pjoOpen==='crew'&&c){c.f=[{t:'S',c:PAL((personData(it).color||'#3361ff').toLowerCase()).strong,o:1}];}
+  return id;};
+</script>
 <style>
 html.app-dark #phone{background:#242424}
 html.app-dark body.onphone{background:#242424}
@@ -3695,7 +3743,7 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v46';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v47';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
