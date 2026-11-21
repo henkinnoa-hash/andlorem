@@ -3399,7 +3399,7 @@ const _pl20=profLayout;profLayout=function(open){return open&&PROF_OPEN[open]?PR
 goBack=function(){
   const here=cur&&famOf(cur._fid);
   while(NAV.length){const e=NAV.pop();if(e.fam===here)continue;
-    if(baseOf(e.id)==='709:26157'||(e.node&&e.node.base==='709:26157')){_show14('709:26157',{...PUSHB},true);return;}
+    if(baseOf(e.id)==='709:26157'||(e.node&&e.node.base==='709:26157')){ST.q='';_show14(e.node&&e.node.fam==='newchat'?'C:new':'709:26157',{...PUSHB},true);return;}
     N[e.id]=N[e.id]||e.node;_show14(e.id,{...PUSHB},true);return;}
   _show14(HOME,{t:'SMART_ANIMATE',du:.77,e:'GENTLE'});
 };
@@ -3604,6 +3604,90 @@ function paletteInk(s){
 const _ab22=APP.afterBuild;APP.afterBuild=s=>{_ab22(s);try{paletteInk(s);}catch(e){}};
 const _oc22=APP.onChange;APP.onChange=(ne,dest)=>{_oc22(ne,dest);setTimeout(()=>{try{paletteInk(cur);}catch(e){}},0);};
 </script>
+<script>
+/* ======================================================================
+   Part 23 — someone's project page (Figma "someone else project"),
+   "Learn more" in their Active project, a + on Chats to start a new chat
+   (search, people only), "Your Chats" in your colour, every grey #C8C8C8.
+   ====================================================================== */
+GREYS.add('#e8e8e8');GREYS.add('#8e8e8e');
+OTHERS_FR.delete('C:chats');KEEP_FR.delete('C:chats');
+OTHERS_FR.add('PJ:other');KEEP_FR.add('PJ:other');
+
+/* ---------- their project ---------- */
+function otherProject(D){
+  if(D._pj)return D._pj;
+  const about=(D.about||'').trim();
+  return [about?pjHeuristic(about):'A new project',about||'Just joined &Lorem, the project is taking shape.'];
+}
+const PJO_SLOTS={crew:[13,221,117,117,4],project:[143,221,247,117,4],needs:[13,351,143,208,4],timeline:[169,351,221,130,4],
+  brings:[247,494,143,208,4],asked:[13,572,221,286,[4,4,4,50]],budget:[247,715,143,143,[4,4,50,4]]};
+function otherProjectFrame(it){
+  const D=personData(it),pc=(D.color||'#3361ff').toLowerCase(),P=PAL(pc),h=hashStr(D.name),pj=otherProject(D),open=ST.pjoOpen||null;
+  const f=clone(N['709:26284']);const k=[];
+  // title: "Noa’s Project" in grey, the project's name in their colour, always on one line
+  const a=`${D.first}’s Project\n`,b=pj[0];const fs=Math.min(42,Math.floor(42*377/Math.max(1,textW(b,42,700))));
+  k.push({n:'My Profile pjo',y:'TE',x:13,Y:115,w:377,h:94,ch:a+b,ah:'L',av:'T',ar:'NONE',
+    sg:[[0,a.length,'Helvetica Neue','Bold',42,'#c8c8c8',1,'%105','%0',0,0],[a.length,a.length+b.length,'Helvetica Neue','Bold',fs,P.title,1,'%105','%0',0,0]]});
+  const L={crew:'',project:'The\nProject',needs:`${D.first} Needs`,timeline:'Timeline',brings:`${D.first} Brings`,asked:'Asked to\nJoin',budget:'Budget'};
+  const d=new Date();d.setDate(d.getDate()+21);
+  const needs=missingSkills(pj[1]).filter(s=>!D.skills.includes(s)).slice(0,4);
+  const asked=[];for(let i=0;i<2+h%4;i++){const n=FIRSTS[(h+i*7)%FIRSTS.length]+' '+LASTS[(h+i*11)%LASTS.length];asked.push(`${n} · ${pick(SKILL_POOL,h,i)}`);}
+  const body={project:pj[1],needs:needs.join('\n')||'A crew with a strong concept',timeline:`Pitch\nCrew · now\nWork\nReview\nDue ${d.getDate()} ${MON3[d.getMonth()]}`,
+    brings:D.skills.slice(0,4).join('\n'),asked:asked.join('\n'),budget:`${fmtNum(300+(h%13)*100)} nis`};
+  const tap=key=>act({f:'pjo',k:key});
+  for(const key of Object.keys(PJO_SLOTS)){const [x,y,w,hh,cr]=PJO_SLOTS[key],on=key===open&&key!=='crew';
+    k.push(tile('pjo-'+key,x,y,w,hh,on?P.strong:P.tint,cr,key==='crew'?null:tap(on?null:key)));
+    if(L[key]){const l=lbl('pjo-'+key+'-l',x+13,y+11,w-26,L[key],on?P.strongInk:P.tintInk,16);l.h=42;l.r=tap(on?null:key);k.push(l);}
+    if(on){const t=lbl('pjo-'+key+'-v',x+13,y+(L[key].includes('\n')?52:36),w-26,body[key],P.strongInk,14,'Regular');t.h=hh-60;t.sg[0][7]='%130';k.push(t);}}
+  // the crew: four faces
+  {const pool=avatarPool();const [x,y,w,hh]=PJO_SLOTS.crew;for(let i=0;i<4;i++){const g=pool[(h+i*5)%pool.length];const av={n:'pjo-face-'+i,y:'GR',g,fit:1};
+    fitAvatar(av,{x:x+6+(i%2)*(w-12)/2,Y:y+6+Math.floor(i/2)*(hh-12)/2,w:(w-12)/2,h:(hh-12)/2});k.push(av);}}
+  // their face, in their colour
+  k.push(tile('pjo-me',169,494,65,65,P.strong,4,act({f:'pjoprof'})));
+  {const av={n:'pjo-me-g',y:'GR',g:D.g||(it.char&&it.char.g)||faceFor(D.name),fit:1};fitAvatar(av,{x:169,Y:494,w:65,h:65});av.r=act({f:'pjoprof'});k.push(av);}
+  const sb=f.k.find(c=>c.n==='Status bar');f.k=[...k,sb].filter(Boolean);f.r=[{t:'ON_DRAG',a:[{n:'APP',f:'back',tr:{dir:'RIGHT'}}]}];
+  const id=addFrame('PJ:other',f);N[id].back=1;N[id].fam='pjo:'+D.name;return id;
+}
+N['PJ:other']={i:'PJ:other',y:'FR',n:'project',k:[],w:402,h:874,x:0,Y:0};
+
+/* ---------- "Learn more" inside their Active project ---------- */
+const _pf23=personFrame;personFrame=function(it){const id=_pf23(it);if(ST.profOpen!=='active')return id;
+  const f=N[id],t=f.k.find(c=>c.n==='p-active');if(!t)return id;const P=PAL((personData(it).color||'#3361ff').toLowerCase());
+  const bw=Math.min(144,t.w-26),bx=t.x+13,by=t.Y+t.h-13-49;const r=act({f:'pjmore'});
+  const btn=tile('p-learn',bx,by,bw,49,P.tint,4,r);const l=Object.assign(lbl('p-learn-l',bx,by+15,bw,'Learn more',P.tintInk,16),{ah:'C',r});
+  const v=f.k.find(c=>c.n==='p-active-v');if(v)v.h=Math.min(v.h,by-v.Y-8);
+  const si=f.k.findIndex(c=>c.n==='home-btn');f.k.splice(si<0?f.k.length:si,0,btn,l);return id;};
+
+/* ---------- Chats: + (top right, on the line of the back arrow) starts a new chat ---------- */
+const PLUS_SVG='<svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.5 4v17M4 12.5h17" stroke="#C8C8C8" stroke-width="3.2" stroke-linecap="round"/></svg>';
+const _chf23=chatsFrame;chatsFrame=function(){const id=_chf23();SVG['xplus']=SVG['xplus']||PLUS_SVG;const r=act({f:'newchat'});
+  N[id].k.push({n:'chat-plus-hit',y:'RE',x:350,Y:50,w:52,h:56,f:[],r},{n:'chat-plus',y:'GR',g:'xplus',x:365,Y:66,w:25,h:25,r});return id;};
+ROUTE['C:list']=chatsFrame;
+// the new chat screen: the search screen, people only; tap someone and the chat opens
+ROUTE['C:new']=()=>{const id=ROUTE['709:26157']();ST.searchFor='chat';N[id].fam='newchat';
+  const t=N[id].k.find(c=>c.n==='Search for Anything');if(t){t.ch=t.ch.replace('What’s','Who’s');}return id;};
+{const fn=ROUTE['709:26157'];ROUTE['709:26157']=()=>{ST.searchFor=null;return fn();};}
+const _sm23=searchMode;searchMode=function(f,st){_sm23(f,st);if(ST.searchFor!=='chat'||!cur)return;
+  const T=[...cur.children].find(e=>e._n&&e._n.n==='Search for Anything');const sp=T&&T.querySelector('span');if(sp&&/What’s/.test(sp.textContent))sp.textContent=sp.textContent.replace('What’s','Who’s');};
+const _sp23=searchPick;searchPick=function(q){const r=_sp23(q);if(ST.searchFor!=='chat')return r;
+  const all=rankAll(q).filter(x=>x.type==='person');const idx=searchIndex().filter(x=>x.type==='person');
+  const people=[...all];for(const x of idx)if(people.length<8&&!people.some(p=>p.title===x.title))people.push(x);
+  return {people:people.slice(0,4),things:people.slice(4,8)};};
+const _or23=openResult;openResult=function(r){
+  if(ST.searchFor==='chat'&&r&&r.type==='person'&&r.it){if(!r.it.person.label)r.it.person.label=r.it.person.name;const c=chatFor(r.it);ST.chatDraft='';
+    if(NK&&document.activeElement===NK)NK.blur();show(chatFrame(c.id),{...GENTLE});return;}
+  return _or23(r);};
+
+const _act23=APP.action;APP.action=(el,a)=>{
+  if(a.f==='pjmore'){if(ST.profIt){ST.pjoOpen=null;show(otherProjectFrame(ST.profIt),GENTLE);}return;}
+  if(a.f==='pjo'){ST.pjoOpen=a.k;if(ST.profIt)show(otherProjectFrame(ST.profIt),{t:'SMART_ANIMATE',du:.5,e:'GENTLE'});return;}
+  if(a.f==='pjoprof'){goBack();return;}
+  if(a.f==='newchat'){ST.q='';show('C:new',GENTLE);return;}
+  _act23(el,a);
+};
+N['C:new']={i:'C:new',y:'FR',n:'new chat',k:[],w:402,h:874,x:0,Y:0};
+</script>
 <style>
 html.app-dark #phone{background:#242424}
 html.app-dark body.onphone{background:#242424}
@@ -3611,7 +3695,7 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v45';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v46';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
