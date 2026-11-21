@@ -34,9 +34,9 @@ body{background:var(--ground);margin:0;overflow:hidden;font-family:var(--ui);
 #phone.full{border-radius:0;box-shadow:none}
 /* on a real phone: the page is the app — no grey margins, and the phone's own status bar replaces the drawn one */
 html,body{touch-action:manipulation}  /* no double-tap zoom anywhere */
-html:has(body.onphone){height:auto}
-body.onphone{background:#fff;padding:0;height:auto;overflow-x:hidden;overflow-y:auto}
-body.onphone #phone{touch-action:pan-y}
+html:has(body.onphone){height:100%;overflow:hidden;overscroll-behavior:none}
+body.onphone{background:#fff;padding:0;position:fixed;inset:0;height:100%;overflow:hidden;overscroll-behavior:none}
+body.onphone #phone{touch-action:none}
 body.onphone #phone .n[data-nm="Status bar"]{visibility:hidden}
 .scr{position:absolute;left:0;top:0;width:402px;height:874px;overflow:hidden}
 .n{position:absolute;box-sizing:border-box}
@@ -506,9 +506,12 @@ function fit(){
     // on a phone the drawn status bar is hidden, so the app uses the screen from y=62 down: 402×812
     // always edge to edge: the app takes the full width of the phone. If the browser's own bars leave less
     // height than the app needs, the page scrolls a little (and Safari tucks its bars away)
-    const s=W/402;phone._s=s;phone.style.transformOrigin='0 0';phone.style.transform=`scale(${s})`;
-    stage.style.cssText=`display:block;height:${Math.ceil(812*s)}px;overflow:hidden`;
-    phone.style.margin=`${-62*s}px 0 0 0`;return;
+    // the screen never moves: the app fits the phone's width, or its height when the browser's bars take room
+    // (the keyboard opening does not shrink it: the tallest height seen at this width is kept)
+    if(fit._w!==W){fit._w=W;fit._h=0;} fit._h=Math.max(fit._h||0,H);
+    const s=Math.min(W/402,fit._h/812);phone._s=s;phone.style.transformOrigin='0 0';phone.style.transform=`scale(${s})`;
+    stage.style.cssText=`display:block;height:${fit._h}px;overflow:hidden`;
+    phone.style.margin=`${-62*s}px 0 0 ${(W-402*s)/2}px`;return;
   }
   stage.style.cssText='';phone.style.margin='';phone.style.transformOrigin='center center';
   const avH=H-80,avW=W-32;
@@ -3736,6 +3739,11 @@ const _opf24b=otherProjectFrame;otherProjectFrame=function(it){const id=_opf24b(
   if(ST.pjoOpen==='crew'&&c){c.f=[{t:'S',c:PAL((personData(it).color||'#3361ff').toLowerCase()).strong,o:1}];}
   return id;};
 </script>
+<script>
+/* ---------- the screen stays put: no page scrolling or bouncing on a phone ---------- */
+document.addEventListener('touchmove',e=>{if(document.body.classList.contains('onphone')&&e.cancelable)e.preventDefault();},{passive:false});
+window.addEventListener('scroll',()=>{if(document.body.classList.contains('onphone')&&(window.scrollY||window.scrollX))window.scrollTo(0,0);});
+</script>
 <style>
 html.app-dark #phone{background:#242424}
 html.app-dark body.onphone{background:#242424}
@@ -3743,7 +3751,7 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v47';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v48';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
