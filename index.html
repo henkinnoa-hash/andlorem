@@ -539,9 +539,9 @@ const h2r=h=>{const n=parseInt(h.slice(1),16);return [n>>16,n>>8&255,n&255];};
 const r2h=a=>'#'+a.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
 const mix=(a,b,t)=>{const A=h2r(a),B=h2r(b);return r2h(A.map((v,i)=>v+(B[i]-v)*t));};
 const lum=h=>{const [r,g,b]=h2r(h).map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4);});return .2126*r+.7152*g+.0722*b;};
-const ink=c=>lum(c)>.36?mix(c,'#000000',lum(c)>.65?.5:.34):c;   // a readable shade of a colour on white
-const accent=()=>ST.accent||'#3361ff';
-const tintOf=c=>mix(c,'#ffffff',.84);
+let ink=c=>lum(c)>.36?mix(c,'#000000',lum(c)>.65?.5:.34):c;   // a readable shade of a colour on white
+let accent=()=>ST.accent||'#3361ff';
+let tintOf=c=>mix(c,'#ffffff',.84);
 APP.mapFill=(hex,o)=>{ if(!ST.accent)return hex;const h=hex.toLowerCase();
   if(o&&o.fixc)return hex;
   if(o&&h==='#f2f2f7'&&/^(pill|area$|btn$)/.test(o.n||''))return tintOf(ST.accent);
@@ -2345,7 +2345,7 @@ function crewFrame(base){
     const lab=f.k.find(k=>k.y==='TE'&&(k.ch||'').startsWith(dept)&&!(dept==='Visual Communication'&&/found/.test(k.ch)));
     if(lab)tx(lab,dept);
     if(base==='709:26483'){
-      if(hit){c.f=[{t:'S',c:S[1],o:1}];c.fixc=1;const r=act({f:'crew',d:dept});c.r=r;if(lab){lab.r=clone(r);lab.sg[0][5]=lum(S[1])>.45?S[2]:'#ffffff';}}
+      if(hit){c.f=[{t:'S',c:S[1],o:1}];c.fixc=1;const r=act({f:'crew',d:dept});c.r=r;if(lab){lab.r=clone(r);lab.sg[0][5]=S[2];}}
       else{c.f=[{t:'S',c:'#dee6ff',o:1}];delete c.fixc;delete c.r;if(lab){delete lab.r;if(offLab)lab.sg=[[0,dept.length,...offLab[0].slice(2)]];}}
     }
   }
@@ -2466,7 +2466,7 @@ renderSearch=function(f,st){
   const tileEl=(i,x,y,w,h,col,cr)=>{const t=build({n:'sr-tile-'+i,y:'RE',x:x-FIELD_X,Y:y-FIELD_Y,w,h,f:[{t:'S',c:col,o:1}],cr,fixc:1});t.classList.add('hot');put(t);
     if(!RM)t.animate([{opacity:0,transform:'scale(.6)'},{opacity:1,transform:'none'}],{duration:420,delay:(n++)*45,easing:springEase(1,220,18,.42),fill:'backwards'});return t;};
   const usedF=new Set(),pool=avatarPool();
-  people.forEach((r,k)=>{const [x,y,w,h,col,cr]=S_PEOPLE[k];const i=f._res.push(r)-1;tileEl(i,x,y,w,h,col,cr);
+  people.forEach((r,k)=>{const [x,y,w,h,col0,cr]=S_PEOPLE[k];const col=r.it&&(r.it.real||r.it.gen)?r.color:col0;const i=f._res.push(r)-1;tileEl(i,x,y,w,h,col,cr);
     let g=r.g||faceFor(r.title);for(let j=0;usedF.has(g)&&j<pool.length;j++)g=pool[(pool.indexOf(g)+1)%pool.length];usedF.add(g);if(r.it&&r.it.char&&r.it.char.g!==g&&!r.it.person._full)r.it.char.g=g;const av={n:'sr-face-'+i,y:'GR',g,fit:1};fitAvatar(av,{x:x-FIELD_X,Y:y-FIELD_Y,w,h});const fe=build(av);put(fe);
     if(!RM)fe.animate([{opacity:0,transform:'scale(.6)'},{opacity:1,transform:'none'}],{duration:420,delay:(n-1)*45+40,easing:springEase(1,220,18,.42),fill:'backwards'});});
   things.forEach((r,k)=>{const [x,y,w,h,col,ink2,cr]=S_TEXT[k];const i=f._res.push(r)-1;tileEl(i,x,y,w,h,col,cr);
@@ -3109,7 +3109,7 @@ function lgFields(s){
   const mk=(key,y,ph)=>{const d=document.createElement('div');d.dataset.k=key;d.className='lg-f';
     d.style.cssText=`position:absolute;left:27px;top:${y}px;height:50px;border-radius:4px;background:#f2f2f7;pointer-events:auto;cursor:text;overflow:hidden;transition:width .25s cubic-bezier(.2,.8,.2,1)`;
     const t=document.createElement('div');t.className='lg-t';t.style.cssText=`position:absolute;left:16px;top:15px;height:20px;white-space:pre;font:700 17px/20px ${HN};color:#000`;
-    const p=document.createElement('div');p.className='lg-ph';p.textContent=ph;p.style.cssText=`position:absolute;left:16px;top:15px;white-space:pre;font:700 16px/20px ${HN};color:#aeaeb2`;
+    const p=document.createElement('div');p.className='lg-ph';p.textContent=ph;p.style.cssText=`position:absolute;left:16px;top:15px;white-space:pre;font:700 16px/20px ${HN};color:#c8c8c8`;
     const c=document.createElement('div');c.className='lg-c blink';c.style.cssText=`position:absolute;top:14px;width:2px;height:22px;border-radius:1px;background:${accent()}`;
     const pen=document.createElement('img');pen.src=svgUrl(PEN_G);pen.alt='';pen.draggable=false;pen.style.cssText='position:absolute;top:16px;width:18px;height:18px;pointer-events:none';
     d.append(t,p,c,pen);d.addEventListener('pointerdown',stop);
@@ -3170,6 +3170,7 @@ async function lgSubmit(mode){
   if(!LG.u||!LG.p){LG.err=mode==='signup'?'Choose a username and a password':'Enter your username and password';LG.focus=LG.u?'p':'u';lgRender();lgShake();return;}
   LG_BUSY=true;LG.err='';lgRender();let r;try{r=await enter(LG.u,LG.p,mode);}catch(e){r={err:'Something went wrong, try again'};}LG_BUSY=false;
   if(!r.ok){LG.err=r.err;lgRender();lgShake();return;}
+  {const box=lgScreen()&&cur.querySelector('.lg');if(box){box.style.pointerEvents='none';if(!RM)box.animate([{opacity:1},{opacity:0}],{duration:220,easing:'ease-out',fill:'forwards'});else box.remove();}}
   LG.p='';LG.focus=null;LG.err='';ST.newSignup=false;SAVED='';if(NK&&document.activeElement===NK)NK.blur();
   startSync();
   if(r.existing)show(HOME,GENTLE);else show('709:28961',mode==='signup'?{...PUSHF}:GENTLE);
@@ -3277,7 +3278,7 @@ function fixInk(s){
       const nc=onColor(bg.c);sp.style.color=t.a<1?`rgba(${h2r(nc).join(',')},${t.a})`:nc; } });
 }
 // chat bubbles and tiles get the same treatment
-const _ab19=APP.afterBuild;APP.afterBuild=s=>{_ab19(s);try{fixInk(s);}catch(e){}if(N[s._fid]&&(N[s._fid].ready||N[s._fid].login))lgFields(s);};
+const _ab19=APP.afterBuild;APP.afterBuild=s=>{_ab19(s);if(N[s._fid]&&(N[s._fid].ready||N[s._fid].login))lgFields(s);};
 
 /* ---------- actions ---------- */
 const _act19=APP.action;APP.action=(el,a)=>{
@@ -3451,6 +3452,127 @@ const _crf20=crewFrame;crewFrame=function(b){const id=_crf20(b);
     if(c.y==='TE'&&Math.abs(c.Y-219)<1){c.Y=232;} }
   return id;};
 </script>
+<script>
+/* ======================================================================
+   Part 21 — colour as designed in Figma ("צבעים"): every colour you can
+   pick has its own 2–3 tones and the text colour for each tone. Profiles,
+   settings and the project page use those tones. Grey is #C8C8C8.
+   Also: "no" in a chat ends it with a sad face, real people keep their
+   colour in search, any name you type becomes a person you can open.
+   ====================================================================== */
+const FAMS=[
+  [['#3361ff','#dee6ff'],['#dee6ff','#3361ff']],
+  [['#ffe0c9','#985625'],['#985625','#ffe0c9']],
+  [['#f0feff','#82d1d6'],['#82d1d6','#157c82'],['#157c82','#82d1d6']],
+  [['#8d655d','#f0cbc3'],['#f0cbc3','#8d655d']],
+  [['#ffe9f2','#ffadcd'],['#ffadcd','#a93965'],['#a93965','#ffadcd']],
+  [['#fff6de','#8e7b4a'],['#ffda7c','#8e7b4a'],['#8e7b4a','#ffda7c']],
+  [['#ef752a','#ffdbc5'],['#ffdbc5','#ef752a']],
+  [['#ffc0b3','#c43f23'],['#c43f23','#ffc0b3']],
+  [['#ad7f13','#ffe8b1'],['#ffe8b1','#ad7f13']],
+  [['#fff2f2','#d88282'],['#d88282','#ffd8d8'],['#ffd8d8','#d88282']],
+  [['#fff2e9','#c27944'],['#c27944','#ffdac0'],['#ffdac0','#c27944']],
+  [['#749191','#e0f2f2'],['#e0f2f2','#749191']],
+  [['#fef4fe','#7c667c'],['#7c667c','#dcccdc'],['#dcccdc','#7c667c']],
+  [['#f1dcaa','#928567'],['#928567','#f1dcaa']],
+  [['#f4f8eb','#586a35'],['#dcedbd','#586a35'],['#586a35','#dcedbd']],
+];
+// the colours of the departments and of the home screen (Figma), and the text that goes on them
+const TEXT_ON={'#ff6567':'#ac0002','#ffda7c':'#8e7b4a','#7293ff':'#0027a9','#c6daa2':'#496f00','#de6224':'#852c00','#55729f':'#233857','#a14989':'#44164a','#e6c8f3':'#88589c',
+  '#6f9077':'#3b4f40','#82d1d6':'#157c82','#56aae6':'#09609e','#df8b4f':'#8f4009','#d7ebb3':'#89a060','#9891ff':'#383290'};
+const FAM_OF={};for(const f of FAMS)for(const [c,t] of f){FAM_OF[c]=f;if(!TEXT_ON[c])TEXT_ON[c]=t;}
+const PALS={};
+function PAL(p){p=(p||'#3361ff').toLowerCase();if(PALS[p])return PALS[p];const f=FAM_OF[p];
+  if(!f){const t=mix(p,'#ffffff',.84);return PALS[p]={pick:p,strong:p,tint:t,strongInk:lum(p)>.5?mix(p,'#000000',.62):'#ffffff',tintInk:lum(p)>.45?mix(p,'#000000',.45):p,title:lum(p)>.36?mix(p,'#000000',.4):p};}
+  const tones=f.map(x=>x[0]).sort((a,b)=>lum(b)-lum(a)),light=tones[0],dark=tones[tones.length-1];
+  const tint=light,strong=p===light?dark:p;
+  // titles on white: the colour itself when it reads well, otherwise the darkest tone
+  const title=contrast(p,'#ffffff')>=2.2?p:dark;
+  return PALS[p]={pick:p,strong,tint,strongInk:TEXT_ON[strong],tintInk:TEXT_ON[tint],title};
+}
+const P_=()=>PAL(ST.accent||'#3361ff');
+accent=()=>ST.accent?P_().strong:'#3361ff';
+tintOf=c=>{c=(c||'').toLowerCase();return FAM_OF[c]?PAL(c).tint:mix(c,'#ffffff',.84);};
+const _ink21=ink;ink=c=>{c=(c||'').toLowerCase();return FAM_OF[c]?PAL(c).title:_ink21(c);};
+onColor=function(bg){bg=(bg||'').toLowerCase();if(TEXT_ON[bg])return TEXT_ON[bg];return lum(bg)>.5?mix(bg,'#000000',.62):'#ffffff';};
+readable=function(fg,bg){bg=(bg||'').toLowerCase();if(TEXT_ON[bg])return TEXT_ON[bg];return contrast(fg,bg)>=3?fg:onColor(bg);};
+
+/* ---------- Figma colours follow your colour; every grey is #C8C8C8 ---------- */
+const GREYS=new Set(['#d8d8d8','#aeaeb2','#c7c7cc','#8e8e93','#d1d1d6','#b0b0b0','#a8a8a8','#bdbdbd','#cccccc','#c8c8c8']);
+const _mf21=APP.mapFill,_mt21=APP.mapText;
+APP.mapFill=(hex,o)=>{ if(!ST.accent)return _mf21(hex,o);const h=(hex||'').toLowerCase();if(o&&o.fixc)return hex;const P=P_();
+  if(h==='#3361ff')return P.strong; if(h==='#dee6ff')return P.tint;
+  if(o&&h==='#f2f2f7'&&/^(pill|area$|btn$)/.test(o.n||''))return P.tint;
+  if(o&&o.pr&&h==='#242424')return P.strong;
+  return _mf21(hex,o); };
+APP.mapText=(hex,size,o)=>{ const h=(hex||'').toLowerCase();if(GREYS.has(h))return '#c8c8c8';
+  if(!ST.accent)return _mt21(hex,size,o);const P=P_();
+  if(h==='#3361ff')return size>=30?P.title:P.tintInk;
+  if(h==='#dee6ff')return P.strongInk;
+  if(size>=30&&(h==='#242424'||h==='#2b2b2b'||h==='#000000'))return P.title;
+  return _mt21(hex,size,o); };
+// the grey back arrow
+function prepPart21(){ if(SVG['xcaret'])SVG['xcaret']=SVG['xcaret'].replace(/#D8D8D8/gi,'#C8C8C8'); }
+
+/* ---------- settings, project page and someone's profile: text in the tones of the colour ---------- */
+function retint(f,map){ for(const c of f.k||[]){ if(c.sg)for(const s of c.sg){const h=(s[5]||'').toLowerCase();if(map[h])s[5]=map[h];}
+    if(c.f&&c.f[0]&&c.f[0].t==='S'&&map['fill:'+(c.f[0].c||'').toLowerCase()])c.f=[{...c.f[0],c:map['fill:'+c.f[0].c.toLowerCase()]}]; } }
+const _sf21=settingsFrame;settingsFrame=function(){const id=_sf21();const P=P_(),A=accent();
+  // closed tiles: the tint with its own text; the open tile: the strong tone with its own text
+  for(const c of N[id].k){ if(c.y!=='TE'||!c.sg||!/^s-/.test(c.n))continue;
+    const on=/^s-(\w+)-/.exec(c.n);const key=on&&on[1];const open=key&&key===ST.setOpen;
+    for(const s of c.sg){const h=(s[5]||'').toLowerCase();if(h===A.toLowerCase()&&!open)s[5]=P.tintInk;}}
+  for(const c of N[id].k)if(c.n==='My Profile'||/^Settings/.test(c.ch||''))for(const s of c.sg||[])if((s[5]||'').toLowerCase()==='#3361ff')s[5]=P.title;
+  return id;};
+const _pjf21=projectFrame;projectFrame=function(){const id=_pjf21();const P=P_(),A=accent(),DK0=mix(A,'#000000',.45).toLowerCase();
+  const map={[A.toLowerCase()]:P.tintInk,[DK0]:P.strongInk};retint(N[id],map);
+  for(const c of N[id].k)if(c.n==='My Profile project'&&c.sg&&c.sg[1])c.sg[1][5]=P.title;
+  return id;};
+const _pf21=personFrame;personFrame=function(it){const id=_pf21(it);const D=personData(it),pc=(D.color||'').toLowerCase();
+  if(!FAM_OF[pc])return id;const P=PAL(pc);
+  const soft=mix(pc,'#ffffff',.72).toLowerCase(),side=mix(pc,'#ffffff',.62).toLowerCase();
+  const lab=(lum(pc)>.5?mix(pc,'#000000',.45):mix(pc,'#000000',.15)).toLowerCase(),onPc=(lum(pc)>.55?mix(pc,'#000000',.62):'#ffffff').toLowerCase();
+  retint(N[id],{['fill:'+pc]:P.strong,['fill:'+soft]:P.tint,['fill:'+side]:P.tint,[lab]:P.tintInk,[onPc]:P.strongInk,[ink(pc)]:P.title,[_ink21(pc).toLowerCase()]:P.title});
+  return id;};
+
+/* ---------- chats: "no" gets a sad face, and then they stop writing ---------- */
+const SAD=['😢','😭','🫩','😱','😖'];
+const _ca21=chatAnswer;chatAnswer=async function(c,id){
+  const s=chatState(id),last=((s.log.filter(m=>m.from==='me').slice(-1)[0]||{}).t||'').trim();
+  if(/^(no|nope|nah|no thanks|no thank you|not really|לא)\b/i.test(last)){s.stopped=true;return SAD[Math.floor(Math.random()*SAD.length)];}
+  return _ca21(c,id);};
+const _cs21=chatSend;chatSend=function(){
+  const id=ST.chatId;const s=id&&ST.chat&&ST.chat[id];
+  if(s&&s.stopped&&!/^u:/.test(id)){const txt=(ST.chatDraft||'').trim();if(!txt)return;
+    s.log.push({from:'me',t:txt});s.last=Date.now();ST.chatDraft='';ST.chatScroll=0;if(NK&&NK._set==='CHAT')NK._prev=NK.value='';chatRefresh(true);return;}
+  _cs21();};
+// a stopped chat sends no more notifications either
+const _nt21=notify;notify=function(){const saved=[];
+  for(let i=CHATS.length-1;i>=0;i--){const c=CHATS[i];if(ST.chat&&ST.chat[c.id]&&ST.chat[c.id].stopped)saved.push(...CHATS.splice(i,1));}
+  try{_nt21();}finally{CHATS.push(...saved.reverse());}};
+
+/* ---------- search: type a name, meet that person ---------- */
+const GEN={};
+function genPerson(name){
+  const key=name.toLowerCase();if(GEN[key])return GEN[key];const h=hashStr(key);
+  const [first,...rest]=name.split(' ');const depts=Object.keys(DEPT_SKILLS),dept=depts[h%depts.length];
+  const col=SET_COLORS[h%SET_COLORS.length],g=faceFor(name);const [w0,h0]=svgSize(g);const s=Math.min(117*.72/h0,117*.6/w0);
+  const it={color:col,gen:1,person:{name,first,year:YEARS4[h%4],college:COLLEGES[h%COLLEGES.length],dept,skill:DEPT_SKILLS[dept][h%15],credits:1+h%4,label:name},char:{g,w:w0*s,h:h0*s}};
+  return GEN[key]=it;
+}
+function typedName(q){
+  q=(q||'').trim().replace(/\s+/g,' ');if(!/^[a-zA-Z'-]{2,}( [a-zA-Z'-]{2,}){1,2}$/.test(q))return null;
+  const cap=q.split(' ').map(w=>w[0].toUpperCase()+w.slice(1).toLowerCase()).join(' ');
+  const known=new Set([...Object.keys(STUDY).map(k=>STUDY[k][0]),...Object.values(DEPT_SKILLS).flat(),...SKILL_POOL,...PROJECTS.map(p=>p[0])].map(x=>x.toLowerCase()));
+  if(known.has(cap.toLowerCase()))return null;
+  return cap;
+}
+const _si21=searchIndex;searchIndex=function(){const out=_si21();const n=typedName(ST.q);
+  if(n&&!out.some(r=>r.type==='person'&&r.title.toLowerCase().startsWith(n.toLowerCase()))){const it=genPerson(n);const D=personData(it);
+    it._sr=Object.assign(it._sr||{},{type:'person',title:D.name,sub:`${D.dept} · ${D.year} · ${D.college}`,color:D.color,g:D.g||it.char.g,tags:[D.dept,D.college].join(' '),it});
+    out.unshift(it._sr);}
+  return out;};
+</script>
 <style>
 html.app-dark #phone{background:#242424}
 html.app-dark body.onphone{background:#242424}
@@ -3458,7 +3580,7 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v41';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v42';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
@@ -3476,7 +3598,7 @@ window.__lorem={show:id=>{if(cur){cur.remove();cur=null;}busy=false;clearTimers(
   try{
     const [n,s]=await Promise.all([fetch('nodes.json').then(r=>r.json()),fetch('svg.json').then(r=>r.json())]);
     N=n;SVG=s;prepShadows();for(const o of Object.values(N))indexComps(o,null);
-    prep();prepRoutes();prepOnboarding();prepProject();prepPart4();prepPart5();prepPart6();prepPart7();prepPart14();prepPart16();prepPart17();prepPart19();
+    prep();prepRoutes();prepOnboarding();prepProject();prepPart4();prepPart5();prepPart6();prepPart7();prepPart14();prepPart16();prepPart17();prepPart19();prepPart21();
     fetch('splash.mp4').then(r=>{if(!r.ok)throw 0;return r.blob();}).then(b=>{VIDEO=URL.createObjectURL(b);}).catch(()=>{VIDEO=null;});
     fetch('poster.png').then(r=>{if(!r.ok)throw 0;return r.blob();}).then(b=>{POSTER=URL.createObjectURL(b);}).catch(()=>{});
     document.getElementById('msg').remove();
