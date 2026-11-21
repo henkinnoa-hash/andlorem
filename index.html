@@ -3119,7 +3119,7 @@ function lgFields(s){
   if(login){
     // the ✓ square appears next to the password once both are filled (like every field in the app)
     const ok=document.createElement('div');ok.className='lg-btn lg-ok';
-    ok.style.cssText=`position:absolute;top:429px;width:50px;height:50px;border-radius:4px;background:#f2f2f7;pointer-events:auto;cursor:pointer;display:none;transition:left .25s cubic-bezier(.2,.8,.2,1)`;
+    ok.style.cssText=`position:absolute;top:429px;width:50px;height:50px;border-radius:4px;background:#f2f2f7;pointer-events:none;cursor:pointer;opacity:0;transform:scale(.6);transition:opacity .3s ease-out,transform .4s cubic-bezier(.2,1.4,.4,1),left .25s cubic-bezier(.2,.8,.2,1)`;
     ok.innerHTML='<svg width="18" height="14" viewBox="0 0 18 14" style="position:absolute;left:16px;top:18px"><path d="M1.5 7.5 6.5 12.5 16.5 1.5" fill="none" stroke="#242424" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     ok.addEventListener('pointerdown',stop);ok.addEventListener('pointerup',e=>{stop(e);lgSubmit('login');});box.appendChild(ok);
     // Figma: "New here? Sign up", centred at the bottom → the onboarding goes on to "Every Project Starts as Lorem Ipsum."
@@ -3137,12 +3137,12 @@ function lgFields(s){
 function lgRender(s0){const s=s0||lgScreen();if(!s)return;const box=s.querySelector('.lg');
   for(const d of box.querySelectorAll('.lg-f')){const k=d.dataset.k,v=LG[k]||'',shown=k==='p'?'•'.repeat(v.length):v;
     const t=d.querySelector('.lg-t'),ph=d.querySelector('.lg-ph'),c=d.querySelector('.lg-c'),pen=d.querySelector('img');
-    t.textContent=shown;ph.style.opacity=v?0:1;const vw=v?textW(shown,17,700):0,tw=v?vw:textW(ph.textContent,16,700);
+    t.textContent=shown;ph.style.opacity=v?0:1;const vw=v?textW(shown,17,700):0,tw=Math.max(vw,textW(ph.textContent,16,700));
     const w=Math.min(348,Math.ceil(16+tw+12+18+16));d.style.width=w+'px';pen.style.left=(w-34)+'px';
     const room=w-16-12-18-16;t.style.left=(16+Math.min(0,room-vw))+'px';
     const on=LG.focus===k;c.style.display=on?'block':'none';c.style.left=(16+Math.min(room,vw)+(v?2:0))+'px';}
   const ok=box.querySelector('.lg-ok'),pf=box.querySelector('.lg-f[data-k="p"]');
-  if(ok&&pf){ok.style.display=LG.u&&LG.p?'block':'none';ok.style.left=(27+parseFloat(pf.style.width)+12)+'px';}
+  if(ok&&pf){const on=!!(LG.u&&LG.p);ok.style.opacity=on?1:0;ok.style.transform=on?'none':'scale(.6)';ok.style.pointerEvents=on?'auto':'none';ok.style.left=(27+parseFloat(pf.style.width)+12)+'px';}
   const e=box.querySelector('.lg-err');if(e)e.textContent=LG.err||'';}
 function lgShake(){const s=lgScreen();if(!s||RM)return;for(const d of s.querySelectorAll('.lg-f'))d.animate([{transform:'none'},{transform:'translateX(-7px)'},{transform:'translateX(6px)'},{transform:'translateX(-3px)'},{transform:'none'}],{duration:340,easing:'ease-out'});}
 function lgKey(k){
@@ -3170,7 +3170,7 @@ async function lgSubmit(mode){
   if(!LG.u||!LG.p){LG.err=mode==='signup'?'Choose a username and a password':'Enter your username and password';LG.focus=LG.u?'p':'u';lgRender();lgShake();return;}
   LG_BUSY=true;LG.err='';lgRender();let r;try{r=await enter(LG.u,LG.p,mode);}catch(e){r={err:'Something went wrong, try again'};}LG_BUSY=false;
   if(!r.ok){LG.err=r.err;lgRender();lgShake();return;}
-  if(NK&&document.activeElement===NK)NK.blur();LG.p='';LG.focus=null;LG.err='';ST.newSignup=false;SAVED='';
+  LG.p='';LG.focus=null;LG.err='';ST.newSignup=false;SAVED='';if(NK&&document.activeElement===NK)NK.blur();
   startSync();
   if(r.existing)show(HOME,GENTLE);else show('709:28961',mode==='signup'?{...PUSHF}:GENTLE);
 }
@@ -3267,11 +3267,11 @@ function fixInk(s){
   const abs=e=>{let x=0,y=0;for(let n=e;n&&n!==s;n=n.parentElement)if(n._box){x+=n._box.x;y+=n._box.y;}return {x,y,w:e._box.w,h:e._box.h};};
   const els=[...s.querySelectorAll('.n')];const bgs=[];
   els.forEach((e,i)=>{ if(!e._box||(e._n&&e._n.y==='TE'))return;const p=parseCol(e.style.backgroundColor||e.style.backgroundImage||e.style.background);if(!p||p.a<.08)return;
-    const c=p.a<1?mix('#ffffff',p.c,p.a):p.c;if(chroma(c)<12)return;bgs.push({e,i,c,r:abs(e)});});
+    const c=p.a<1?mix('#ffffff',p.c,p.a):p.c;bgs.push({e,i,c,r:abs(e)});});
   if(!bgs.length)return;
   els.forEach((e,i)=>{ if(!e._n||e._n.y!=='TE'||!e._box)return;const r=abs(e);const px=r.x+6,py=r.y+9;let bg=null;
     for(const b of bgs){ if(b.i>i&&!b.e.contains(e))continue;if(px>=b.r.x&&px<=b.r.x+b.r.w&&py>=b.r.y&&py<=b.r.y+b.r.h)bg=b; }
-    if(!bg)return;
+    if(!bg||chroma(bg.c)<12)return;
     for(const sp of e.querySelectorAll('span')){ const t=parseCol(sp.style.color);if(!t)continue;
       const dark=lum(bg.c)<.2,need=dark?4.5:3;if(contrast(t.c,bg.c)>=need)continue;
       const nc=onColor(bg.c);sp.style.color=t.a<1?`rgba(${h2r(nc).join(',')},${t.a})`:nc; } });
@@ -3305,6 +3305,152 @@ function prepPart19(){
     b.x=gx-g0*k;b.y=cy-sz/2;b.w=b.h=sz;Object.assign(a.style,{left:b.x+'px',top:b.y+'px',width:sz+'px',height:sz+'px'});for(const im of a.querySelectorAll('img'))Object.assign(im.style,{left:'0px',top:'0px',width:sz+'px',height:sz+'px'});};
 }
 </script>
+<script>
+/* ======================================================================
+   Part 20 — a social network: profiles refresh for everyone, tap a face
+   in a chat to see their profile, steady answers in chats, settings pens
+   and ± buttons, profile tiles that open in their own places, search that
+   starts clean, a short title for your project, departments without the
+   home button in the middle, Mission crew tiles off the title.
+   ====================================================================== */
+
+/* ---------- the login: closing the keyboard with both fields filled logs you in ---------- */
+NK.addEventListener('blur',()=>{ const s=lgScreen();if(!s||!N[s._fid].login||LG_BUSY)return;
+  if(LG.u&&LG.p)setTimeout(()=>{if(lgScreen()&&LG.u&&LG.p&&!LG_BUSY)lgSubmit('login');},120); });
+
+/* ---------- everyone sees your latest profile (and you see theirs) ---------- */
+let USERS_FAST=null;
+const _ss20=startSync;startSync=function(){_ss20();if(!USERS_FAST&&API_URL&&ST.token)USERS_FAST=setInterval(loadUsers,15000);};
+const _st20=stopSync;stopSync=function(){_st20();clearInterval(USERS_FAST);USERS_FAST=null;};
+const _show20=show;show=function(id,tr,isBack){_show20(id,tr,isBack);
+  const b=cur&&baseOf(cur._fid);if(ST.token&&['C:list','C:chats','709:26157','PR:prof'].includes(b))loadUsers();};
+
+/* ---------- in a chat: tap their face (or their name) to open their profile ---------- */
+const _cf20=chatFrame;chatFrame=function(id){
+  const nid=_cf20(id);const c=CHATS.find(z=>z.id===id);const cp=c&&chatPerson(c);if(!cp||!cp.it)return nid;
+  for(const k of N[nid].k)if(/^msg-\d+-av(bg|g)$/.test(k.n)||k.n==='My Profile chat')k.r=act({f:'chatprof',id});
+  return nid;};
+const _act20=APP.action;APP.action=(el,a)=>{
+  if(a.f==='chatprof'){const c=CHATS.find(z=>z.id===a.id);const cp=c&&chatPerson(c);if(cp&&cp.it){if(NK&&document.activeElement===NK)NK.blur();show(profileFrame(cp.it,cur._fid),GENTLE);}return;}
+  _act20(el,a);
+};
+
+/* ---------- chats: some questions always get the same kind of answer ---------- */
+const DEPT_PROJECTS={
+  'Visual Communication':[['Night market posters','six risograph posters for the Jaffa night market, two colours, bold type and hand-drawn maps'],['Student magazine: Lorem','a 64-page student magazine about the people behind design projects, I do the layout and the covers'],['Coffee brand identity','a full identity for a small roastery: name, logo, cups, bags and the shop signage'],['Hebrew display typeface','a display typeface for Hebrew and Latin, inspired by old cinema signs'],['Motion poster series','posters that move: five animated posters for a design week']],
+  'Fashion':[['Upcycled sofa textiles','a capsule collection made from old sofa fabrics, six looks with a lookbook shoot'],['Recycled denim collection','jackets and bags from second-hand denim, with embroidered details'],['Graduation capsule','eight looks about the sea, draped silk and knitwear'],['Pattern lab','zero-waste pattern cutting for everyday shirts'],['Accessories line','a small line of bags and belts from cactus leather']],
+  'Animation':[['Stop-motion short: Lost Glove','a 2-minute stop-motion film about a glove looking for its pair'],['Music video','a hand-drawn music video for a local band, frame by frame'],['Character pack','ten characters for a children\'s app, with simple walk cycles'],['Title sequence','opening titles for a student film festival'],['Short documentary','a 3D-animated short about the history of the bus station']],
+  'Textile':[['Natural dye collection','scarves and cushions dyed only with plants from the Galilee'],['Woven wall pieces','large woven pieces for a café in Tel Aviv'],['Print repeat studio','surface patterns for wallpaper and bedding'],['Felt lamps','lampshades from hand-felted wool'],['Material research','new yarns from recycled plastic bags']],
+  'Architecture':[['Pocket park','a tiny park between two buildings in Florentin, with benches and shade'],['Student housing','a model and renders for shared student housing'],['Pavilion','a timber pavilion for a summer festival'],['Café interior','the interior and lighting of a small neighbourhood café'],['Library courtyard','a quiet courtyard for the city library']],
+  'Industrial Design':[['Modular lamp','a lamp you build from three parts, with packaging and a name'],['Ceramic tableware brand','a set of mugs, plates and bowls with a full brand'],['Zero-waste packaging','packaging for a cosmetics brand that leaves nothing behind'],['Kids chair','a chair that grows with the child'],['Bike light','a clip-on bike light, 3D printed and tested']],
+  'Photography':[['Studio still-life series','twelve still-life images of everyday objects, shot in studio light'],['Portrait book','portraits of shop owners on Levinsky street'],['Lookbook shoot','a lookbook for a fashion graduation collection'],['Night city','a series of long exposures of Tel Aviv at night'],['Product shots','product photography for a ceramics brand']],
+  'Coding':[['Tel Aviv bike-share app','an app that shows free bikes and the safest route'],['Generative posters','posters made by code for a music festival'],['Portfolio builder','a simple site builder for design students'],['Interactive installation','a wall that reacts to people walking by'],['Data story','an interactive story about the city\'s trees']],
+};
+const _pd20=personData;personData=function(it){const P=_pd20(it);
+  if(P&&!P.real&&!P.me&&!P._pj&&P.name){const pool=DEPT_PROJECTS[P.dept]||DEPT_PROJECTS['Visual Communication'];
+    const own=pool.find(p=>(P.projects||[]).includes(p[0]));P._pj=own||pool[hashStr(P.name)%pool.length];
+    P.projects=[P._pj[0],...(P.projects||[]).filter(x=>x!==P._pj[0])].slice(0,3);}
+  return P;};
+function fixedAnswer(c,text){
+  const t=(text||'').toLowerCase(),D=c.it?personData(c.it):null;
+  if(/credit/.test(t)){const s=chatState(c.id);s.credits=s.credits||1+Math.floor(Math.random()*8);
+    return `I have ${s.credits} credit${s.credits>1?'s':''} left this semester. How many do you have left?`;}
+  if(/(portfolio|behance|your work|link)/.test(t)&&D)return `Sure! Here's my portfolio: ${D.link} ✦ and my Instagram is ${D.insta}`;
+  if(/(when|deadline|due|timeline|time line|submit|hand in|schedule)/.test(t)){
+    const d=new Date();d.setDate(d.getDate()+21);const when=`${d.getDate()} ${MONTHS[d.getMonth()]}`;
+    return `We need to submit by ${when}, three weeks from today. Check that it works for you and let's start working!`;}
+  if(/(what|where).{0,25}(study|studying|learn|major|department|school|college)/.test(t)&&D)
+    return `I'm a ${D.year}-year ${D.dept} student at ${D.college}. I mostly do ${D.skills.slice(0,2).join(' and ')}.`;
+  if(/(more|tell|explain|expand|details?|about).{0,30}project|project\?/.test(t)&&D){const pj=D._pj||[D.projects[0],'a project I really care about'];
+    return `It's "${pj[0]}": ${pj[1]}. Want to be part of it?`;}
+  return null;
+}
+const _ca20=chatAnswer;chatAnswer=async function(c,id){
+  const s=chatState(id),last=(s.log.filter(m=>m.from==='me').slice(-1)[0]||{}).t||'';
+  const f=fixedAnswer(c,last);if(f)return f;return _ca20(c,id);};
+
+/* ---------- settings: the pen in the colour of the text, and easier to tap; ± in clear squares ---------- */
+function penIn(col){const id='xpen-'+col.slice(1);if(!SVG[id])SVG[id]=(SVG[PEN_G]||'').replace(/fill="#[0-9A-Fa-f]{6}"/g,`fill="${col}"`);return id;}
+const _sf20=settingsFrame;settingsFrame=function(){
+  const id=_sf20();const f=N[id],A=accent(),DK=onColor(A),open=ST.setOpen;
+  const add=[];
+  for(const c of f.k){
+    if(c.n==='s-pen'){c.g=penIn(DK);add.push({n:'s-pen-hit',y:'RE',x:c.x-5,Y:c.Y-5,w:c.w+10,h:c.h+10,f:[],r:c.r});}
+    if(/^s-credits-(m|p)$/.test(c.n)){c.w=c.h=50;c.f=[{t:'S',c:'#ffffff',o:1}];}
+    if(/^s-credits-(ml|pl)$/.test(c.n)){c.sg[0][5]=readable(A,'#ffffff');c.h=22;}
+  }
+  const si=f.k.findIndex(c=>c.n==='home-btn');f.k.splice(si<0?f.k.length:si,0,...add);return id;};
+
+/* ---------- someone's profile: each tile opens in a place of its own (like Settings) ---------- */
+const PROF_OPEN={
+  general:{pic:[13,221,143,143,4],general:[169,221,221,273,4],active:[13,377,143,117,4],info:[247,507,143,65,4],social:[13,507,143,143,4],joined:[13,663,143,97,4],skills:[169,585,221,273,[4,4,50,4]],message:[13,773,143,85,[4,4,4,50]]},
+  skills:{pic:[13,221,143,143,4],general:[169,221,221,117,4],active:[169,351,221,143,4],info:[247,507,143,65,4],social:[13,377,143,117,4],joined:[13,507,143,130,4],skills:[169,585,221,273,[4,4,50,4]],message:[13,650,143,208,[4,4,4,50]]},
+  active:{pic:[13,221,143,143,4],general:[169,221,221,143,4],info:[169,377,221,117,4],active:[13,377,143,325,4],social:[247,507,143,65,4],joined:[169,585,221,117,4],skills:[169,715,221,143,[4,4,50,4]],message:[13,715,143,143,[4,4,4,50]]},
+  info:{pic:[13,221,78,78,4],general:[104,221,286,78,4],info:[13,312,377,182,4],active:[13,507,143,195,4],social:[247,507,143,65,4],joined:[169,585,221,117,4],skills:[169,715,221,143,[4,4,50,4]],message:[13,715,143,143,[4,4,4,50]]},
+  social:{pic:[13,221,143,143,4],general:[169,221,221,130,4],active:[169,364,221,130,4],info:[13,377,143,117,4],joined:[13,507,143,65,4],skills:[247,507,143,65,4],social:[13,585,377,156,4],message:[13,754,377,104,[4,4,50,50]]},
+  joined:{pic:[13,221,143,143,4],general:[169,221,221,104,4],joined:[169,338,221,157,4],active:[13,377,143,195,4],info:[247,507,143,65,4],social:[169,585,221,273,[4,4,50,4]],skills:[13,585,143,130,4],message:[13,728,143,130,[4,4,4,50]]},
+};
+const _pl20=profLayout;profLayout=function(open){return open&&PROF_OPEN[open]?PROF_OPEN[open]:_pl20(open);};
+
+/* ---------- search always starts clean ---------- */
+{const fn=ROUTE['709:26157'];ROUTE['709:26157']=()=>{ST.q='';if(NK){NK._prev=NK.value='';}return fn();};}
+// going back to search also starts it clean (not the old screen with the old words)
+goBack=function(){
+  const here=cur&&famOf(cur._fid);
+  while(NAV.length){const e=NAV.pop();if(e.fam===here)continue;
+    if(baseOf(e.id)==='709:26157'||(e.node&&e.node.base==='709:26157')){_show14('709:26157',{...PUSHB},true);return;}
+    N[e.id]=N[e.id]||e.node;_show14(e.id,{...PUSHB},true);return;}
+  _show14(HOME,{t:'SMART_ANIMATE',du:.77,e:'GENTLE'});
+};
+
+/* ---------- My Current Project: a short title that sums up the project ---------- */
+const STOP=new Set('i me my we our a an the to of for and or with in on at is are be want wanted need needs would like looking create creating make making design designing build building new project this that it its about some who which will can'.split(' '));
+function pjHeuristic(t){
+  t=(t||'').replace(/[^\w\s'-]/g,' ');const m=t.match(/\b(?:for|of)\s+(?:a|an|the|my|our)?\s*([\w'-]+(?:\s+[\w'-]+){0,2})/i);
+  let words=(m?m[1]:t).split(/\s+/).filter(w=>w&&!STOP.has(w.toLowerCase()));if(words.length<2)words=t.split(/\s+/).filter(w=>w&&!STOP.has(w.toLowerCase()));
+  return words.slice(0,3).map(w=>w[0].toUpperCase()+w.slice(1).toLowerCase()).join(' ')||'My Project';
+}
+async function aiAsk(prompt){
+  try{ if(SAMPLE&&!SAMPLE_OFF){const {text}=await SAMPLE([{role:'user',content:prompt}],{modelTier:'quick',cache:true});return (text||'').trim();}
+    if(API_URL){const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'system',content:'Answer with the title only.'},{role:'user',content:prompt}]})});if(r.ok)return ((await r.json()).text||'').trim();}
+  }catch(e){}return null;}
+function pjTitle(){
+  const about=(ST.about||'').trim();if(!about)return 'Untitled';
+  if(ST.pjTitleFor===about&&ST.pjTitle)return ST.pjTitle;
+  if(ST.pjAskFor!==about){ST.pjAskFor=about;
+    aiAsk(`Give this design student project a short title of 2 to 4 words (max 28 characters), in English, no quotes, no punctuation at the end:\n"${about}"`).then(t=>{
+      t=(t||'').split('\n')[0].replace(/^["“'*\s]+|["”'*.\s]+$/g,'');if(!t||t.length>34||ST.about.trim()!==about)return;
+      ST.pjTitle=t;ST.pjTitleFor=about;if(cur&&baseOf(cur._fid)==='PJ:summary')show(projectFrame(),{t:'SMART_ANIMATE',du:.4,e:'EASE_OUT'});});}
+  return pjHeuristic(about);
+}
+const _pjf20=projectFrame;projectFrame=function(){
+  const id=_pjf20();const t=N[id].k.find(c=>c.n==='My Profile project');
+  if(t){const a='My Project\n';let b=pjTitle();
+    // keep it inside the two blue lines
+    while(b.length>4&&textW(b,32,700)>377*2-40)b=b.split(' ').slice(0,-1).join(' ');
+    t.ch=a+b;t.sg=[[0,a.length,...t.sg[0].slice(2)],[a.length,a.length+b.length,...t.sg[t.sg.length-1].slice(2)]];}
+  return id;};
+ROUTE['PJ:summary']=()=>{ST.pjOpen=null;return projectFrame();};
+
+/* ---------- departments and crews: a student in the middle, not the home button (the arrow goes back) ---------- */
+const _gff20=gridFromFrame;gridFromFrame=function(name,base,kind){
+  const G=_gff20(name,base,kind);
+  if(kind==='people'&&G.items.own&&/^(dept|crew-|deptpage-)/.test(name)){
+    const used=new Set(Object.values(G.items).map(i=>(i.color||'').toLowerCase()));
+    const col=('#'+(Object.keys(PEOPLE).find(c=>!used.has('#'+c))||'b4aeff')).toLowerCase();
+    const id='t'+Object.keys(G.items).length;delete G.items.own;G.items[id]={id,color:col,tile:null,char:null};
+    G.order=G.order.map(x=>x==='own'?id:x);G.lay=layout(G.order,G.sel,G.anchor);
+    {const p=PEOPLE[col.slice(1)];if(p){const g=faceFor(p[0]);const [w0,h0]=svgSize(g);const s=Math.min(117*.72/h0,117*.6/w0);G.items[id].char={g,w:w0*s,h:h0*s};}}
+  }
+  return G;};
+// the dept grid gets its people after this, so the new tile's person is set by attachPeople (its colour is one of PEOPLE)
+
+/* ---------- Mission crew: the top tiles step down, away from the title ---------- */
+const _crf20=crewFrame;crewFrame=function(b){const id=_crf20(b);
+  for(const c of N[id].k){ if(c.y==='RE'&&Math.abs(c.Y-208)<1&&c.h>100){c.Y=221;c.h-=13;}
+    if(c.y==='TE'&&Math.abs(c.Y-219)<1){c.Y=232;} }
+  return id;};
+</script>
 <style>
 html.app-dark #phone{background:#242424}
 html.app-dark body.onphone{background:#242424}
@@ -3312,7 +3458,7 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v40';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v41';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
