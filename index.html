@@ -3930,6 +3930,70 @@ const _hd26=homeDot;homeDot=function(s){_hd26(s);const d=s&&s.querySelector('.ho
 function prepPart26(){
   const _rs=resetState;resetState=function(){_rs();ST.projects=[];ST.pjIdx=0;ST.pjoIdx=0;}; for(const r of N[FR_DUE].r||[])for(const a of r.a)if(a.d==='709:27226')a.tr={t:'PUSH',du:1.02,e:'GENTLE',dir:'LEFT'}; }
 </script>
+<script>
+/* ======================================================================
+   Part 27 — real phone notifications (Web Push) for messages from real
+   users only. The made-up people only write while the app is open.
+   On iPhone this works when &Lorem was added to the Home Screen.
+   ====================================================================== */
+const PUSH_OK=(()=>{try{return (location.origin==='https://henkinnoa-hash.github.io'||window.PUSH_TEST)&&!!API_URL&&'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;}catch(e){return false;}})();
+let PUSH_REG=null,PUSH_EP=null,PUSH_CHAT=null;
+const unb64=s=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')+'==='.slice((s.length+3)%4)),c=>c.charCodeAt(0));
+if(PUSH_OK){try{PUSH_REG=navigator.serviceWorker.register('sw.js').catch(()=>null);}catch(e){PUSH_REG=null;}
+  navigator.serviceWorker.addEventListener('message',e=>{const c=e.data&&e.data.open;if(c)openPushChat(c);});}
+// opened from a notification: "#chat=u:amit"
+try{const m=/#chat=([^&]+)/.exec(location.hash);if(m){PUSH_CHAT=decodeURIComponent(m[1]);history.replaceState(null,'',location.pathname+location.search);}}catch(e){}
+
+// the server learns when the app is on screen (then no notification), and which phone to forget on log out
+const _api27=api;api=function(op,body){body=body||{};
+  if(op==='inbox')body={...body,active:document.visibilityState==='visible'};
+  if(op==='logout'&&PUSH_EP)body={...body,endpoint:PUSH_EP};
+  return _api27(op,body);};
+
+async function pushSubscribe(){
+  if(!PUSH_OK||!ST.token||Notification.permission!=='granted')return false;
+  try{const reg=(await PUSH_REG)||(await navigator.serviceWorker.ready);if(!reg)return false;
+    const v=await _api27('vapid',{});if(!v||!v.key)return false;const key=unb64(v.key);
+    let sub=await reg.pushManager.getSubscription();
+    if(sub){const old=sub.options&&sub.options.applicationServerKey;const same=old&&new Uint8Array(old).every((b,i)=>b===key[i]);if(!same){await sub.unsubscribe();sub=null;}}
+    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key});
+    PUSH_EP=sub.endpoint;const r=await _api27('subscribe',{token:ST.token,sub:sub.toJSON()});return !!(r&&r.ok);
+  }catch(e){return false;}
+}
+const pushAskedKey=()=>'lorem.pushAsked.'+(ST.user||'');
+// once, on Home: "Want a notification when someone writes to you?" (looks like the log-out question)
+function askPush(){
+  if(!PUSH_OK||!ST.token||Notification.permission!=='default'||LS.get(pushAskedKey(),0)||!cur||cur.querySelector('.quit'))return;
+  if(![MENU,HOME].includes(baseOf(cur._fid)))return;
+  LS.set(pushAskedKey(),1);
+  const A=accent(),T=tintOf(A),ov=mix(A,'#6e6e6e',.5),tx=readable(A,T),bt=onColor(A);
+  const w=document.createElement('div');w.className='quit push-ask';w.style.cssText='position:absolute;left:0;top:0;width:402px;height:874px;z-index:70';
+  const stop=e=>e.stopPropagation();w.addEventListener('pointerdown',stop);w.addEventListener('pointerup',stop);w.addEventListener('wheel',e=>{e.stopPropagation();e.preventDefault();},{passive:false});
+  const dim=document.createElement('div');dim.style.cssText=`position:absolute;left:0;top:0;width:402px;height:874px;background:${ov};opacity:.62`;
+  const p=document.createElement('div');p.style.cssText=`position:absolute;left:52px;top:356px;width:299px;height:163px;border-radius:4px;background:${T}`;
+  const q=document.createElement('div');q.textContent='Get a notification when someone writes to you?';q.style.cssText=`position:absolute;left:25px;top:15px;width:250px;font:700 20px/24px ${HN};color:${tx}`;
+  const btn=(x,label,fn)=>{const b=document.createElement('div');b.textContent=label;b.style.cssText=`position:absolute;left:${x}px;top:96px;width:117px;height:39px;border-radius:4px;background:${A};color:${bt};font:700 16px/39px ${HN};text-align:center;cursor:pointer`;
+    b.addEventListener('pointerup',e=>{e.stopPropagation();fn();});return b;};
+  const close=()=>{if(RM){w.remove();return;}dim.animate([{opacity:.62},{opacity:0}],{duration:260,fill:'forwards'});p.animate([{opacity:1,transform:'none'},{opacity:0,transform:'scale(.94)'}],{duration:220,fill:'forwards'}).onfinish=()=>w.remove();};
+  // the permission question must come straight from the tap (iPhone)
+  const yes=()=>{close();let pr;try{pr=Notification.requestPermission();}catch(e){pr=null;}Promise.resolve(pr).then(()=>pushSubscribe());};
+  p.append(q,btn(26,'Not now',close),btn(156,'Yes, please',yes));
+  w.append(dim,p);cur.appendChild(w);
+  if(!RM){dim.animate([{opacity:0},{opacity:.62}],{duration:320,easing:'ease-out'});p.animate([{opacity:0,transform:'scale(.92)'},{opacity:1,transform:'none'}],{duration:380,easing:'cubic-bezier(.2,.8,.2,1)'});}
+}
+// tapping a notification opens that chat (after logging in, if needed)
+function openPushChat(id){
+  if(!/^u:[a-z0-9._-]+$/.test(id||''))return;
+  if(!ST.token||!cur||N[cur._fid].login||N[cur._fid].ready){PUSH_CHAT=id;return;}
+  PUSH_CHAT=null;const c=CHATS.find(z=>z.id===id)||realUser(id.slice(2),{});ST.chatDraft='';
+  try{if(NK&&document.activeElement===NK)NK.blur();}catch(e){}
+  show(chatFrame(c.id),{...GENTLE});pollInbox(false);
+}
+const _ss27=startSync;startSync=function(){_ss27();if(!ST.token)return;pushSubscribe();
+  if(PUSH_CHAT)setTimeout(()=>{if(PUSH_CHAT)openPushChat(PUSH_CHAT);},1200);};
+const _show27=show;show=function(id,tr,isBack){_show27(id,tr,isBack);
+  if(PUSH_OK&&ST.token&&cur&&[MENU,HOME].includes(baseOf(cur._fid)))setTimeout(askPush,1400);};
+</script>
 <style>
 html.app-dark #phone{background:#242424}
 html.app-dark body.onphone{background:#242424}
@@ -3937,7 +4001,7 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v52';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v53';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
