@@ -3846,7 +3846,7 @@ function pjBar(k,list,idx,P,swAct){
   const n=list.length;if(!n)return;const x0=39,W=351,gap=n===2?13:4,w=(W-gap*(n-1))/n;
   list.forEach((name,i)=>{const x=x0+i*(w+gap),on=i===idx,r=on?null:swAct(i);
     if(on){k.push({n:'pj-bar-'+i,y:'RE',x,Y:81,w,h:20,cr:4,f:[{t:'S',c:P.strong,o:1}],fixc:1});
-      const t=(name||'Project').slice(0,Math.floor(w/6.2));k.push(Object.assign(lbl('pj-bar-l',x,84,w,t,P.strongInk,11),{ah:'C',h:14}));}
+      const t=(name||'Project').slice(0,Math.floor(w/6.2));k.push(Object.assign(lbl('pj-bar-l',x,86,w,t,P.strongInk,11),{ah:'C',h:14}));}
     else{k.push({n:'pj-bar-'+i,y:'RE',x,Y:89,w,h:4,cr:4,f:[{t:'S',c:'#c8c8c8',o:1}],fixc:1});k.push({n:'pj-bar-hit-'+i,y:'RE',x,Y:73,w,h:36,f:[],r});}});
 }
 function bigTitle(t,a,b,col){ // "My Project" / "Noa’s Project" over the name: 42px, the name kept on one line
@@ -4034,6 +4034,87 @@ async function pushCheck(){
   say('Test now: '+fmt(r.now)+'\n(201 = sent — a notification should appear)');
 }
 </script>
+<script>
+/* ======================================================================
+   Part 29 — "Back Home" on the pitching screens, "Choose a due date",
+   Chats and search: tap a face to see who it is, tap again to open,
+   the project name sits in the middle of its bar, and the made-up
+   messages come at 30 s, then 50 s, then every 1.5 minutes.
+   ====================================================================== */
+const BACKHOME_FR=['709:29362','775:36313','861:15321','861:15423','861:15480'];
+function prepPart29(){
+  for(const id of BACKHOME_FR){const f=N[id];if(!f||f.k.some(c=>c.n==='back-home'))continue;const r=act({f:'skip',d:HOME});
+    const si=f.k.findIndex(c=>c.n==='Status bar');
+    const t=Object.assign(lbl('back-home',270,803,97,'Back Home','#aeaeb2',16),{ah:'R',h:20,r});
+    const hit={n:'back-home-hit',y:'RE',x:262,Y:784,w:128,h:60,f:[],r};
+    f.k.splice(si<0?f.k.length:si,0,hit,t);}
+  // the due date screen
+  (function walk(n){if(!n)return;if(n.ch==='Anything on Your Mind')tx(n,'Choose a due date');for(const c of n.k||[])walk(c);})(N[FR_DUE]);
+  for(const v of Object.values(COMP))(function walk(n){if(!n)return;if(n.ch==='Anything on Your Mind')tx(n,'Choose a due date');for(const c of n.k||[])walk(c);})(v);
+}
+
+/* ---------- made-up messages: 30 s, 50 s, then every 1.5 minutes ---------- */
+const NOTE_GAPS=[30000,50000,90000];let NOTE_N=0;
+startNotes=function(){if(NOTE_T)return;NOTE_N=0;const next=()=>{NOTE_T=setTimeout(()=>{notify();NOTE_N++;next();},NOTE_GAPS[Math.min(NOTE_N,NOTE_GAPS.length-1)]);};next();};
+stopNotes=function(){if(NOTE_T){clearTimeout(NOTE_T);clearInterval(NOTE_T);NOTE_T=null;}if(NOTE_EL){NOTE_EL.remove();NOTE_EL=null;}};
+
+/* ---------- Chats: tap a face → it grows with the name (like Grow Your Portfolio), tap again → the chat ---------- */
+const _chf29=chatsFrame;chatsFrame=function(){
+  const id=_chf29();const f=N[id];
+  const isTileK=c=>c.y==='RE'&&/^chat-/.test(c.n)&&!/-dot$/.test(c.n)&&!/^chat-plus/.test(c.n)&&c.r&&c.r[0]&&c.r[0].a[0].f==='chat';
+  const tiles=f.k.filter(isTileK);if(!tiles.length)return id;
+  const ids=tiles.map(t=>t.r[0].a[0].id);
+  const dots=new Set(f.k.filter(c=>/-dot$/.test(c.n)).map(c=>c.n.slice(5,-4)));
+  const items={};for(const t of tiles){const cid=t.r[0].a[0].id;const av=f.k.find(c=>c.n==='chat-'+cid+'-g');const c=CHATS.find(z=>z.id===cid);
+    items[cid]={color:t.f[0].c,g:av&&av.g,name:(c&&(c.it&&c.it.person&&c.it.person.name||c.name))||cid};}
+  let order=(ST.chatOrder||[]).filter(x=>ids.includes(x));for(const x of ids)if(!order.includes(x))order.push(x);
+  const sel=ST.chatSel&&ids.includes(ST.chatSel)?ST.chatSel:null;
+  const hadHome=f.k.some(c=>c.n==='home-btn');const L=layout(hadHome?['own',...order]:order,sel,sel?ST.chatAnchor:null);ST.chatPos=L.pos;
+  const at=f.k.findIndex(c=>isTileK(c)||c.n==='home-btn');
+  f.k=f.k.filter(c=>!(isTileK(c)||/^chat-.+-(g|dot|name)$/.test(c.n)&&!/^chat-plus/.test(c.n)||c.n==='home-btn'));
+  const add=[];
+  if(L.pos.own){const p=L.pos.own;add.push({n:'home-btn',y:'GR',g:'a0o6sp30d',x:p.x,Y:p.Y,w:p.w,h:p.h,cr:4,r:HOME_TAP()});}
+  for(const cid of order){const p=L.pos[cid];if(!p)continue;const it=items[cid],big=cid===sel,r=act({f:'chatsel',id:cid});
+    add.push({n:'chat-'+cid,y:'RE',x:p.x,Y:p.Y,w:p.w,h:p.h,cr:p.cr,f:[{t:'S',c:it.color,o:1}],fixc:1,r});
+    const g=it.g||faceFor(it.name);const av={n:'chat-'+cid+'-g',y:'GR',g,fit:1,r};
+    if(big)fitAvatar(av,{x:p.x+p.w*.19,Y:p.Y+p.h*.08,w:p.w*.62,h:p.h*.62});else fitAvatar(av,{x:p.x,Y:p.Y,w:p.w,h:p.h});add.push(av);
+    if(big){const t=lbl('chat-'+cid+'-name',p.x+13,p.Y+p.h-40,p.w-26,it.name,onColor(it.color),16);Object.assign(t,{ah:'C',r});add.push(t);}
+    if(dots.has(cid))add.push({n:'chat-'+cid+'-dot',y:'RE',x:p.x+p.w-20,Y:p.Y+10,w:10,h:10,cr:5,f:[{t:'S',c:lum(it.color)>.5?mix(it.color,'#000000',.6):'#ffffff',o:1}],fixc:1});}
+  f.k.splice(Math.max(0,Math.min(at,f.k.length)),0,...add);return id;};
+ROUTE['C:list']=chatsFrame;
+const _act29=APP.action;APP.action=(el,a)=>{
+  if(a.f==='chatsel'){
+    if(ST.chatSel===a.id){ST.chatSel=null;ST.chatAnchor=null;_act29(el,{f:'chat',id:a.id});return;}
+    const pos=ST.chatPos||{};const p=pos[a.id];if(!p)return;
+    const vis=Object.keys(pos).filter(x=>x!=='own').sort((x,y)=>(pos[x].Y-pos[y].Y)||(pos[x].x-pos[y].x));
+    ST.chatOrder=[...vis,...(ST.chatOrder||[]).filter(x=>!vis.includes(x))];
+    ST.chatSel=a.id;ST.chatAnchor={r:p.r,c:p.c};show(chatsFrame(),GENTLE);return;}
+  _act29(el,a);};
+// coming to Chats from anywhere else starts with no face chosen
+const _show29=show;show=function(id,tr,isBack){
+  const from=cur&&baseOf(cur._fid);if(id==='C:list'&&from!=='C:chats'&&from!=='C:chat'){ST.chatSel=null;ST.chatAnchor=null;}
+  _show29(id,tr,isBack);};
+
+/* ---------- search: the first tap on a face shows the name, the second opens them ---------- */
+const _click29=APP.click;
+APP.click=el=>{
+  if(el&&el._n&&/^sr-(tile|face)-\d+$/.test(el._n.n)){const f=fieldOf(el);const i=+el._n.n.split('-').pop();const r=f&&f._res&&f._res[i];
+    if(r&&r.type==='person'&&f._srSel!==i+'|'+f._q){
+      f._srSel=i+'|'+f._q;
+      for(const e of [...f.children])if(e._n&&/^sr-name-/.test(e._n.n))e.remove();
+      for(const e of f.children)if(e._n&&/^sr-face-/.test(e._n.n)){e.style.transition='transform .35s cubic-bezier(.2,.8,.2,1)';e.style.transform='none';}
+      const tileE=[...f.children].find(e=>e._n&&e._n.n==='sr-tile-'+i),face=[...f.children].find(e=>e._n&&e._n.n==='sr-face-'+i);if(!tileE)return true;
+      const b=tileE._box,col=(r.it&&(r.it.real||r.it.gen))?r.color:((tileE._n.f&&tileE._n.f[0].c)||r.color);
+      if(face){face.style.transformOrigin='50% 0';face.style.transform='translateY(4%) scale(.72)';}
+      const d=document.createElement('div');d._n={n:'sr-name-'+i};d._box={...b};
+      d.style.cssText=`position:absolute;left:${b.x}px;top:${b.y}px;width:${b.w}px;height:${b.h}px;display:flex;align-items:flex-end;justify-content:center;padding:0 8px 10px;box-sizing:border-box;pointer-events:none;text-align:center;font:700 15px/17px ${HN};color:${onColor(col)};z-index:2`;
+      d.textContent=r.title;(face&&face.nextSibling?f.insertBefore(d,face.nextSibling):f.appendChild(d));
+      if(!RM)d.animate([{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:300,easing:'ease-out'});
+      return true;}
+  }
+  return _click29(el);
+};
+</script>
 <style>
 html.app-dark #phone{background:#242424}
 html.app-dark body.onphone{background:#242424}
@@ -4041,7 +4122,7 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v54';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v55';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
@@ -4059,7 +4140,7 @@ window.__lorem={show:id=>{if(cur){cur.remove();cur=null;}busy=false;clearTimers(
   try{
     const [n,s]=await Promise.all([fetch('nodes.json').then(r=>r.json()),fetch('svg.json').then(r=>r.json())]);
     N=n;SVG=s;prepShadows();for(const o of Object.values(N))indexComps(o,null);
-    prep();prepRoutes();prepOnboarding();prepProject();prepPart4();prepPart5();prepPart6();prepPart7();prepPart14();prepPart16();prepPart17();prepPart19();prepPart21();prepPart26();
+    prep();prepRoutes();prepOnboarding();prepProject();prepPart4();prepPart5();prepPart6();prepPart7();prepPart14();prepPart16();prepPart17();prepPart19();prepPart21();prepPart26();prepPart29();
     fetch('splash.mp4').then(r=>{if(!r.ok)throw 0;return r.blob();}).then(b=>{VIDEO=URL.createObjectURL(b);}).catch(()=>{VIDEO=null;});
     fetch('poster.png').then(r=>{if(!r.ok)throw 0;return r.blob();}).then(b=>{POSTER=URL.createObjectURL(b);}).catch(()=>{});
     document.getElementById('msg').remove();
