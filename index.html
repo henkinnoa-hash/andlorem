@@ -2542,7 +2542,7 @@ function prepPart14(){
 // the arrow itself, top left (Figma: 6,66 · 25×25); big titles step down a little to make room
 function addBack(s){
   const n=N[s._fid];if(!n||!n.back)return;const ax=n.arrow?n.arrow[0]:6,ay=n.arrow?n.arrow[1]:79;
-  if(!n.arrow)  for(const e of [...s.children])if(e._n&&e._n.y==='TE'&&e._box.y>=80&&e._box.y<102&&e._box.x<40){e._box.y=102;e.style.top='102px';}
+  if(!n.arrow)  for(const e of [...s.children])if(e._n&&e._n.y==='TE'&&e._box.y>=80&&e._box.y<102&&e._box.x<40&&!/^pj-bar/.test(e._n.n)){e._box.y=102;e.style.top='102px';}
   const r=act({f:'back'});
   const hit=build({n:'back-hit',y:'RE',x:0,Y:ay-14,w:ax+50,h:52,f:[],r});const arrow=build({n:'back-btn',y:'GR',g:'xcaret',x:ax,Y:ay,w:25,h:25,r});
   const sb=[...s.children].find(e=>e._n&&e._n.n==='Status bar');s.insertBefore(hit,sb||null);s.insertBefore(arrow,sb||null);
@@ -3937,7 +3937,7 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v50';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v51';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
@@ -3966,5 +3966,6 @@ window.__lorem={show:id=>{if(cur){cur.remove();cur=null;}busy=false;clearTimers(
   }catch(e){console.error(e);document.getElementById('msg').textContent='Could not load the prototype data.';}
 })();
 </script>
+
 </body>
 </html>
