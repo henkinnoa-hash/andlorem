@@ -2100,7 +2100,7 @@ function prepPart7(){
     for(const i of v.k)if(/^icon-(check|go|search)$/.test(i.n)){i.x=b.x+(b.w-i.w)/2;i.Y=b.Y+(b.h-i.h)/2;}
   }
   // the intro (Welcome … Swipe … Go) skips to "Enter Your Full Name"; the "Nice to meet you" screens skip to home
-  for(const id of SKIP_FR){const f=N[id];if(!f||f.k.some(c=>c.n==='Skip'))continue;const r=act({f:'skip',d:/^709:264/.test(id)?HOME:'709:28961'});
+  for(const id of SKIP_FR){const f=N[id];if(!f||f.k.some(c=>c.n==='Skip'))continue;const r=act({f:'skip',d:/^709:264/.test(id)?HOME:'709:28946'});
     const si=f.k.findIndex(c=>c.n==='Status bar');
     const t=lbl('Skip',312,804,40,'Skip','#aeaeb2',16);t.h=20;t.r=r;
     const hit={n:'skip-hit',y:'RE',x:292,Y:784,w:98,h:60,f:[],r};
@@ -2924,11 +2924,11 @@ ROUTE['C:list']=chatsFrame;
 // opening a chat marks it read (the dot goes away when you come back)
 const _cfr17=chatFrame;chatFrame=function(id){const s=chatState(id);s.read=1;s.last=s.last||Date.now();return _cfr17(id);};
 
-/* ---------- notifications: a new message every 30 seconds, from the moment you reach home ---------- */
+/* ---------- notifications: a new message every 50 seconds, from the moment you reach home ---------- */
 const NOTE_OLD=['Are we still on for Thursday?','Just sent you the files ✦','Did you get a chance to look at my sketches?','Quick question about the colours, got a sec?','Loved your last version!','Can you send me the logo in black too?'];
 const NOTE_NEW=['Hi, how is it going? Saw your portfolio and loved it','Hey! I\'m looking for someone with your skills for my project','Hi! Want to join my crew this semester?','So excited to dive into this project together!','Yoo when are we meeting up for this first session?'];
 let NOTE_T=null,NOTE_EL=null;
-function startNotes(){if(NOTE_T)return;NOTE_T=setInterval(()=>{notify();},30000);}
+function startNotes(){if(NOTE_T)return;NOTE_T=setInterval(()=>{notify();},50000);}
 function stopNotes(){if(NOTE_T){clearInterval(NOTE_T);NOTE_T=null;}if(NOTE_EL){NOTE_EL.remove();NOTE_EL=null;}}
 function newPersonIt(){
   const known=new Set(CHATS.map(c=>c.it&&c.it.person&&c.it.person.name).filter(Boolean));
@@ -3937,7 +3937,7 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v51';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v52';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
