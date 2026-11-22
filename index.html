@@ -2343,7 +2343,7 @@ function crewFrame(base){
   const P=crewPlan(),f=clone(N[base]);
   const offLab=(f.k.find(c=>c.y==='TE'&&c.ch==='Fashion')||{}).sg;
   for(const c of f.k){
-    if(c.y==='TE'&&/found/.test(c.ch||''))retitle(c,/\d+ found/,P.total+' found');
+    if(c.y==='TE'&&/found/.test(c.ch||''))retitle(c,/\d+ found/,Object.keys(P.depts).length+' found');
     const S=STUDY[c.n];if(!S||c.y!=='RE')continue;const dept=S[0],hit=P.depts[dept];
     const lab=f.k.find(k=>k.y==='TE'&&(k.ch||'').startsWith(dept)&&!(dept==='Visual Communication'&&/found/.test(k.ch)));
     if(lab)tx(lab,dept);
@@ -3129,6 +3129,7 @@ function lgFields(s){
     const nw=document.createElement('div');nw.className='lg-btn';nw.textContent='New here? Sign up';
     nw.style.cssText=`position:absolute;left:0;top:817px;width:402px;text-align:center;font:700 16px/26px ${HN};color:#c8c8c8;pointer-events:auto;cursor:pointer`;
     nw.addEventListener('pointerdown',stop);nw.addEventListener('pointerup',e=>{stop(e);LG.u='';LG.p='';LG.err='';LG.focus=null;if(NK&&document.activeElement===NK)NK.blur();ST.newSignup=true;
+      box.style.pointerEvents='none';if(!RM)box.animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-14px)'}],{duration:380,easing:'cubic-bezier(.4,0,.2,1)',fill:'forwards'});else box.remove();
       show('709:28901',{t:'SMART_ANIMATE',du:1.0220937728881836,e:'GENTLE'});});box.appendChild(nw);
   }
   s.appendChild(box);
@@ -3294,7 +3295,7 @@ const _act19=APP.action;APP.action=(el,a)=>{
    The old prototype swapped "Noa Henkin" (and any email) for YOUR details in every text.
    In chats, on other people's profiles and in search that must never happen. */
 const _subst19=APP.subst;
-APP.subst=(t,fid)=>['C:chat','PR:prof','C:chats','709:26157'].includes(fid)?t:_subst19(t,fid);
+APP.subst=(t,fid)=>['C:chat','PR:prof','C:chats','709:26157','PJ:other','C:new','709:26571'].includes(fid)?t:_subst19(t,fid);
 /* ---------- search: a space between words ---------- */
 const _tk19b=typeKey;
 typeKey=function(k){ const f=liveField();
@@ -3744,6 +3745,74 @@ const _opf24b=otherProjectFrame;otherProjectFrame=function(it){const id=_opf24b(
 document.addEventListener('touchmove',e=>{if(document.body.classList.contains('onphone')&&e.cancelable)e.preventDefault();},{passive:false});
 window.addEventListener('scroll',()=>{if(document.body.classList.contains('onphone')&&(window.scrollY||window.scrollX))window.scrollTo(0,0);});
 </script>
+<script>
+/* ======================================================================
+   Part 25 — last touches: a bolder + on Chats, back always goes to the
+   main screen of its section, an unread dot on Home's Chats tile, and
+   someone's project shows its crew (like My Current Project).
+   ====================================================================== */
+// + : as tall as the arrow's triangle, strokes about 2.5px bolder, on the arrow's line
+const PLUS3='<svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.5 3.4v18.2M3.4 12.5h18.2" stroke="#C8C8C8" stroke-width="6.8" stroke-linecap="round"/></svg>';
+const _chf25=chatsFrame;chatsFrame=function(){const id=_chf25();SVG['xplus']=PLUS3;return id;};
+ROUTE['C:list']=chatsFrame;
+
+// back: a chat goes back to Chats, Chats goes back Home — never to the chat before
+const _gb25=goBack;goBack=function(){
+  const fam=cur&&N[cur._fid]&&N[cur._fid].fam||'';
+  if(/^chat:/.test(fam)||fam==='newchat'){NAV.length=0;_show14('C:list',{...PUSHB},true);return;}
+  if(fam==='chats'){NAV.length=0;_show14(HOME,{t:'SMART_ANIMATE',du:.77,e:'GENTLE'});return;}
+  _gb25();};
+
+// Home: a dot on the Chats tile while something is unread (like on the Chats screen)
+function anyUnread(){return CHATS.some(c=>{const s=ST.chat&&ST.chat[c.id];if(!s)return !c.real;if(s.stopped)return false;
+  const last=s.log[s.log.length-1];return !s.read&&last&&last.from==='in';});}
+function homeDot(s){
+  if(!s||baseOf(s._fid)!==MENU)return;const old=s.querySelector('.home-dot');if(old)old.remove();if(!anyUnread())return;
+  const t=[...s.children].find(e=>e._n&&e._n.n==='Rectangle 39');if(!t)return;const b=t._box;
+  const d=build({n:'home-dot',y:'RE',x:b.x+b.w-23,Y:b.y+13,w:10,h:10,cr:5,f:[{t:'S',c:'#09609e',o:1}],fixc:1});d.classList.add('home-dot');
+  t.after(d);if(!RM)d.animate([{transform:'scale(0)'},{transform:'none'}],{duration:300,easing:'cubic-bezier(.2,1.4,.4,1)'});}
+const _ab25=APP.afterBuild;APP.afterBuild=s=>{_ab25(s);try{homeDot(s);}catch(e){}};
+const _sn25=showNote;showNote=function(c,msg){_sn25(c,msg);try{homeDot(cur);}catch(e){}};
+
+/* ---------- someone's project: their crew, like My Current Project ---------- */
+function otherCrew(it){
+  const D=personData(it),key='crew-pjo-'+hashStr(D.name);if(ST.grids[key])return ST.grids[key];
+  const G=gridFromFrame(key,'709:26571','people');const pj=otherProject(D),h=hashStr(D.name);
+  const needs=missingSkills(pj[1]).filter(s=>!D.skills.includes(s)).slice(0,4);
+  const faces=avatarPool().filter(g=>g!==D.g);let i=0;
+  for(const x of Object.values(G.items).filter(x=>!x.own)){
+    const name=FIRSTS[(h+i*13)%FIRSTS.length]+' '+LASTS[(h+i*7)%LASTS.length],first=name.split(' ')[0];
+    const skill=needs[i%Math.max(1,needs.length)]||pick(SKILL_POOL,h,i);const dept=(deptsFor(skill)[0])||D.dept;
+    x.person={name,first,year:YEARS4[(h+i)%4],college:COLLEGES[(h+i)%COLLEGES.length],dept,skill,credits:1+(h+i)%4,label:`${first} · ${skill}`};
+    const g=faces[(h+i)%faces.length];const [w0,h0]=svgSize(g);const sc=Math.min(117*.72/h0,117*.6/w0);x.char={g,w:w0*sc,h:h0*sc};i++;}
+  G.crew='crew';G.owner=D.first;ST.grids[key]=G;return G;
+}
+function otherCrewFrame(it){
+  const G=otherCrew(it);const id=gridFrame(G);const t=N[id].k.find(c=>c.y==='TE'&&/^Welcome to the/.test(c.ch||''));
+  if(t){const a=`${G.owner}’s\n`,b='Crew';t.ch=a+b;t.sg=[[0,a.length,...t.sg[0].slice(2)],[a.length,a.length+b.length,...t.sg[t.sg.length-1].slice(2)]];
+    t.sg[0][5]='#c8c8c8';t.sg[1][5]=PAL((personData(it).color||'#3361ff').toLowerCase()).title;}
+  N[id].back=1;N[id].fam='grid:'+G.name;return id;
+}
+const _opf25=otherProjectFrame;otherProjectFrame=function(it){
+  const id=_opf25(it);const f=N[id],G=otherCrew(it),P=PAL((personData(it).color||'#3361ff').toLowerCase());
+  const people=Object.values(G.items).filter(x=>x.person&&x.char);const t=f.k.find(c=>c.n==='pjo-crew');if(!t)return id;
+  const on=ST.pjoOpen==='crew';const n=on?Math.min(6,people.length):Math.min(4,people.length),cols=on?3:2;
+  // the faces: the crew's own people (2×2 closed, 3×2 when open, as on My Current Project)
+  f.k=f.k.filter(c=>!/^pjo-face-/.test(c.n));const cw=(t.w-26)/cols,chh=on?(t.h-90)/2:(t.h-26)/2;const add=[];
+  people.slice(0,n).forEach((x,i)=>{const av={n:'pjo-face-'+i,y:'GR',g:x.char.g,fit:1,r:act({f:'pjo',k:'crew'})};
+    fitAvatar(av,{x:t.x+13+(i%cols)*cw,Y:t.Y+(on?44:13)+Math.floor(i/cols)*chh,w:cw,h:chh});add.push(av);});
+  if(on){const l=lbl('pjo-crew-l',t.x+13,t.Y+11,t.w-26,`${people.length} in ${G.owner}’s crew`,P.strongInk,16);add.push(l);
+    const r=act({f:'pjocrew'});add.push(tile('pjo-crew-all',t.x+13,t.Y+t.h-50,t.w-26,38,P.tint,4,r),Object.assign(lbl('pjo-crew-all-l',t.x+13,t.Y+t.h-40,t.w-26,'See the whole crew',P.tintInk,15),{ah:'C',r}));}
+  const at=f.k.indexOf(t)+1;f.k.splice(at,0,...add);return id;};
+const _act25=APP.action;APP.action=(el,a)=>{
+  if(a.f==='pjocrew'){if(ST.profIt)show(otherCrewFrame(ST.profIt),{t:'SMART_ANIMATE',du:1,e:'GENTLE'});return;}
+  if(a.f==='grid'&&ST.grids[a.g]&&ST.grids[a.g].owner){const G=ST.grids[a.g],it=G.items[a.id];
+    if(G.sel===a.id&&it.person){show(profileFrame(it,cur._fid),GENTLE);return;}if(G.sel===a.id)return;
+    gridSelect(G,a.id);const keep=ST.profIt;show((()=>{const id=gridFrame(G);const t=N[id].k.find(c=>c.y==='TE'&&/^Welcome to the/.test(c.ch||''));
+      if(t&&keep){const a2=`${G.owner}’s\n`,b='Crew';t.ch=a2+b;t.sg=[[0,a2.length,...t.sg[0].slice(2)],[a2.length,a2.length+4,...t.sg[t.sg.length-1].slice(2)]];t.sg[0][5]='#c8c8c8';}
+      N[id].back=1;N[id].fam='grid:'+G.name;return id;})(),GENTLE);return;}
+  _act25(el,a);};
+</script>
 <style>
 html.app-dark #phone{background:#242424}
 html.app-dark body.onphone{background:#242424}
@@ -3751,7 +3820,7 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v48';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v49';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
