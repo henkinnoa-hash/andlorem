@@ -2441,7 +2441,7 @@ ROUTE['709:26157']=()=>{const f=clone(N['709:26157']);const big=!(ST.q||'').trim
   const t=f.k.find(c=>c.n==='Search for Anything');
   if(t){const a=big?'What’s \nOn \n':'What’s On\n',b=big?'Your\nMind?':'Your Mind?';t.ch=a+b;
     t.sg=[[0,a.length,'Helvetica Neue','Bold',big?64:48,'#d8d8d8',1,'%105','%0',0,0],[a.length,a.length+b.length,'Helvetica Neue','Bold',big?64:48,'#3361ff',1,'%105','%0',0,0]];
-    Object.assign(t,big?{x:13,Y:102,w:335,h:280}:{x:13,Y:102,w:350,h:110});}
+    Object.assign(t,big?{x:13,Y:111,w:335,h:280}:{x:13,Y:111,w:350,h:110});}
   const fld=f.k.find(c=>c.n==='Search field');if(fld){fld.x=FIELD_X;fld.Y=big?FIELD_Y_BIG:FIELD_Y;}
   return addFrame('709:26157',f);};
 function searchMode(f){
@@ -2453,7 +2453,7 @@ function searchMode(f){
   if(!first&&!RM){f.style.transition=`top .55s ${ease}`;}f._box.y=y;f.style.top=y+'px';
   if(T){const sp=T.querySelectorAll('span');const size=big?64:48;
     if(!first&&!RM){T.style.transition=`top .55s ${ease},left .55s ${ease},width .55s ${ease}`;sp.forEach(x=>x.style.transition=`font-size .55s ${ease},line-height .55s ${ease}`);}
-    Object.assign(T._box,big?{x:13,y:102,w:335}:{x:13,y:102,w:350});T.style.left=T._box.x+'px';T.style.top=T._box.y+'px';T.style.width=T._box.w+'px';
+    Object.assign(T._box,big?{x:13,y:111,w:335}:{x:13,y:111,w:350});T.style.left=T._box.x+'px';T.style.top=T._box.y+'px';T.style.width=T._box.w+'px';
     const inn=T.firstChild;if(inn){if(!first&&!RM)inn.style.transition=`line-height .55s ${ease}`;inn.style.lineHeight=(size*1.05)+'px';inn.style.fontSize=size+'px';}
     if(sp[0]){sp[0].textContent=big?'What’s \nOn \n':'What’s On\n';sp[0].style.fontSize=size+'px';sp[0].style.lineHeight=(size*1.05)+'px';}
     if(sp[1]){sp[1].textContent=big?'Your\nMind?':'Your Mind?';sp[1].style.fontSize=size+'px';sp[1].style.lineHeight=(size*1.05)+'px';}}
@@ -2541,7 +2541,7 @@ function prepPart14(){
 }
 // the arrow itself, top left (Figma: 6,66 · 25×25); big titles step down a little to make room
 function addBack(s){
-  const n=N[s._fid];if(!n||!n.back)return;const ax=n.arrow?n.arrow[0]:6,ay=n.arrow?n.arrow[1]:66;
+  const n=N[s._fid];if(!n||!n.back)return;const ax=n.arrow?n.arrow[0]:6,ay=n.arrow?n.arrow[1]:79;
   if(!n.arrow)  for(const e of [...s.children])if(e._n&&e._n.y==='TE'&&e._box.y>=80&&e._box.y<102&&e._box.x<40){e._box.y=102;e.style.top='102px';}
   const r=act({f:'back'});
   const hit=build({n:'back-hit',y:'RE',x:0,Y:ay-14,w:ax+50,h:52,f:[],r});const arrow=build({n:'back-btn',y:'GR',g:'xcaret',x:ax,Y:ay,w:25,h:25,r});
@@ -2848,7 +2848,7 @@ function projectFrame(){
         const sl=lbl('pj-st-l'+i,x+50,sy,w-70,st+(cur2?' · now':''),i<=now?DK:'#ffffff',15,cur2?'Bold':'Regular');k.push(sl);});
       const due=ST.due?`Due ${ST.due.getDate()} ${MON3[ST.due.getMonth()]} ${ST.due.getFullYear()}`:'No due date yet';
       const dl=lbl('pj-due',x+130,y+11,w-143,due,DK,15,'Regular');dl.ah='R';k.push(dl);
-    } else {const v=lbl('pj-'+key+'-v',x+13,y+(w>200?40:44),w-26,body[key],DK,16,'Regular');v.h=h-56;v.sg[0][7]='%125';k.push(v);}
+    } else {const v=lbl('pj-'+key+'-v',x+13,y+(PJ_TITLE[key].includes('\n')?56:40),w-26,body[key],DK,16,'Regular');v.h=h-56;v.sg[0][7]='%125';k.push(v);}
   }
   k.push({n:'home-btn',y:'GR',g:'a0o6sp30d',x:169,Y:507,w:65,h:65,cr:4,r:HOME_TAP()});
   f.k=[...k,...keep];f.r=[{t:'ON_DRAG',a:[{n:'APP',f:'back',tr:{dir:'RIGHT'}}]}];
@@ -3702,13 +3702,13 @@ N['C:new']={i:'C:new',y:'FR',n:'new chat',k:[],w:402,h:874,x:0,Y:0};
 // every screen with the back arrow: the big title starts at x 13, top 102 (like My Project)
 const _ab24=addBack;addBack=function(s){_ab24(s);const n=N[s._fid];if(!n||!n.back)return;
   for(const e of [...s.children]){ if(!e._n||e._n.y!=='TE'||!e._box)continue;const sp=e.querySelector('span');const fs=sp?parseFloat(sp.style.fontSize):0;
-    if(fs>=30&&e._box.y>=80&&e._box.y<145&&e._box.x<40){e._box.x=13;e._box.y=102;e.style.left='13px';e.style.top='102px';} } };
+    if(fs>=30&&e._box.y>=80&&e._box.y<145&&e._box.x<40&&!/^PJ:/.test(baseOf(s._fid))){e._box.x=13;e._box.y=111;e.style.left='13px';e.style.top='111px';} } };
 
 // the + : the same distance from the edge as the arrow, on the arrow's line
 const PLUS2='<svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.5 2v21M2 12.5h21" stroke="#C8C8C8" stroke-width="3.4" stroke-linecap="round"/></svg>';
 const _chf24=chatsFrame;chatsFrame=function(){const id=_chf24();SVG['xplus']=PLUS2;
   // the arrow's triangle: left edge 13.35, centre 78.5, 18.4 tall → the + mirrors it on the right
-  const p=N[id].k.find(c=>c.n==='chat-plus');if(p){const sz=18.4;p.w=p.h=sz;p.x=402-13.35-sz;p.Y=78.5-sz/2;p.fit=1;}return id;};
+  const p=N[id].k.find(c=>c.n==='chat-plus');if(p){const sz=18.4;p.w=p.h=sz;p.x=402-13.35-sz;p.Y=91.5-sz/2;p.fit=1;}return id;};
 ROUTE['C:list']=chatsFrame;
 
 // Grow Your Portfolio: a student in the middle instead of the home button
@@ -3813,6 +3813,123 @@ const _act25=APP.action;APP.action=(el,a)=>{
       N[id].back=1;N[id].fam='grid:'+G.name;return id;})(),GENTLE);return;}
   _act25(el,a);};
 </script>
+<script>
+/* ======================================================================
+   Part 26 — up to four projects at once (Figma "my Projects – 1/2/4"),
+   "Project done" in The Project, a smooth start to Scanning, a crew of
+   2–6, chips in your colour, the Home dot on the line of "Chats".
+   ====================================================================== */
+/* ---------- several projects: the bar on top (like the onboarding bar) ---------- */
+const PJ_FIELDS=['about','need','budget','due','missingList','pjAsked','pjTitle','pjTitleFor'];
+ST.projects=ST.projects||[];ST.pjIdx=ST.pjIdx||0;
+SNAP_KEYS.push('projects','pjIdx');
+function pjNow(){const o={};for(const k of PJ_FIELDS)o[k]=ST[k];if(o.due instanceof Date)o.due=o.due.toISOString();return o;}
+function pjSync(){ if(!(ST.about||'').trim())return; ST.projects=ST.projects||[];if(ST.pjIdx>ST.projects.length)ST.pjIdx=ST.projects.length;ST.projects[ST.pjIdx||0]=pjNow(); }
+function pjLoad(i){const p=(ST.projects||[])[i];if(!p)return;ST.pjIdx=i;for(const k of PJ_FIELDS)ST[k]=p[k]==null?(k==='budget'||k==='about'?'':null):p[k];
+  ST.due=p.due?new Date(p.due):null;CREW=null;}
+function pjClear(){for(const k of PJ_FIELDS)ST[k]=(k==='budget'||k==='about')?'':null;CREW=null;}
+function toast(msg){ if(!cur)return;const t=document.createElement('div');t.textContent=msg;const P=P_();
+  t.style.cssText=`position:absolute;left:13px;right:13px;top:${874-120}px;padding:14px 16px;border-radius:4px;background:${P.tint};color:${P.tintInk};font:700 15px/19px ${HN};z-index:65;text-align:center`;
+  cur.appendChild(t);if(!RM)t.animate([{opacity:0,transform:'translateY(10px)'},{opacity:1,transform:'none'}],{duration:260});setTimeout(()=>{if(RM){t.remove();return;}t.animate([{opacity:1},{opacity:0}],{duration:300,fill:'forwards'}).onfinish=()=>t.remove();},2600);}
+// "New Project" adds a project; four is the most you can run at once
+const _show26=show;show=function(id,tr,isBack){
+  try{pjSync();}catch(e){}
+  if(id==='709:29362'&&cur&&baseOf(cur._fid)===MENU){
+    const n=(ST.projects||[]).filter(Boolean).length;
+    if(n>=4){const t=[...cur.children].find(e=>e._n&&e._n.n==='Rectangle 36');
+      if(t&&!RM)t.animate([{transform:'none'},{transform:'translateX(-7px)'},{transform:'translateX(6px)'},{transform:'translateX(-3px)'},{transform:'none'}],{duration:360,easing:'ease-out'});
+      toast('You can run up to 4 projects at once');return;}
+    if((ST.about||'').trim()){ST.pjIdx=n;pjClear();}
+  }
+  _show26(id,tr,isBack);};
+function pjBar(k,list,idx,P,swAct){
+  const n=list.length;if(!n)return;const x0=39,W=351,gap=n===2?13:4,w=(W-gap*(n-1))/n;
+  list.forEach((name,i)=>{const x=x0+i*(w+gap),on=i===idx,r=on?null:swAct(i);
+    if(on){k.push({n:'pj-bar-'+i,y:'RE',x,Y:81,w,h:20,cr:4,f:[{t:'S',c:P.strong,o:1}],fixc:1});
+      const t=(name||'Project').slice(0,Math.floor(w/6.2));k.push(Object.assign(lbl('pj-bar-l',x,84,w,t,P.strongInk,11),{ah:'C',h:14}));}
+    else{k.push({n:'pj-bar-'+i,y:'RE',x,Y:89,w,h:4,cr:4,f:[{t:'S',c:'#c8c8c8',o:1}],fixc:1});k.push({n:'pj-bar-hit-'+i,y:'RE',x,Y:73,w,h:36,f:[],r});}});
+}
+function bigTitle(t,a,b,col){ // "My Project" / "Noa’s Project" over the name: 42px, the name kept on one line
+  const fs=Math.min(42,Math.floor(42*377/Math.max(1,textW(b,42,700))));
+  Object.assign(t,{x:13,Y:115,w:377,h:94,ch:a+b});t.sg=[[0,a.length,'Helvetica Neue','Bold',42,'#c8c8c8',1,'%105','%0',0,0],[a.length,a.length+b.length,'Helvetica Neue','Bold',fs,col,1,'%105','%0',0,0]];}
+const _pjf26=projectFrame;projectFrame=function(){
+  pjSync();const id=_pjf26();const f=N[id],P=P_();const list=(ST.projects||[]).filter(Boolean);
+  const t=f.k.find(c=>c.n==='My Profile project');if(t){const b=t.ch.split('\n').slice(1).join(' ');bigTitle(t,'My Project\n',b,P.title);}
+  const k=[];pjBar(k,list.map((p,i)=>i===ST.pjIdx?pjTitle():(p.pjTitle||pjHeuristic(p.about))),ST.pjIdx||0,P,i=>act({f:'pjsw',i}));
+  // The Project, open: "Project done" — like Learn more
+  if(ST.pjOpen==='about'){const tl=f.k.find(c=>c.n==='pj-about');if(tl){const bw=Math.min(144,tl.w-26),bx=tl.x+13,by=tl.Y+tl.h-13-49;const r=act({f:'pjdone'});
+    k.push(tile('pj-done',bx,by,bw,49,P.tint,4,r),Object.assign(lbl('pj-done-l',bx,by+15,bw,'Project done',P.tintInk,16),{ah:'C',r}));
+    const v=f.k.find(c=>c.n==='pj-about-v');if(v)v.h=Math.min(v.h,by-v.Y-8);}}
+  const si=f.k.findIndex(c=>c.n==='Status bar');f.k.splice(si<0?f.k.length:si,0,...k);return id;};
+ROUTE['PJ:summary']=()=>{ST.pjOpen=null;return projectFrame();};
+// "Project done": ask first, then the project leaves the bar and you earn its credit
+function askDone(){
+  if(!cur||cur.querySelector('.quit'))return;const P=P_(),A=accent(),ov=mix(A,'#6e6e6e',.5);
+  const w=document.createElement('div');w.className='quit';w.style.cssText='position:absolute;left:0;top:0;width:402px;height:874px;z-index:70';
+  const stop=e=>e.stopPropagation();w.addEventListener('pointerdown',stop);w.addEventListener('pointerup',stop);
+  const dim=document.createElement('div');dim.style.cssText=`position:absolute;left:0;top:0;width:402px;height:874px;background:${ov};opacity:.62`;
+  const p=document.createElement('div');p.style.cssText=`position:absolute;left:52px;top:366px;width:299px;height:143px;border-radius:4px;background:${P.tint}`;
+  const q=document.createElement('div');q.textContent='Is the project done and submitted?';q.style.cssText=`position:absolute;left:25px;top:15px;width:250px;font:700 20px/24px ${HN};color:${P.tintInk}`;
+  const btn=(x,label,fn)=>{const b=document.createElement('div');b.textContent=label;b.style.cssText=`position:absolute;left:${x}px;top:76px;width:117px;height:39px;border-radius:4px;background:${P.strong};color:${P.strongInk};font:700 16px/39px ${HN};text-align:center;cursor:pointer`;
+    b.addEventListener('pointerup',e=>{e.stopPropagation();fn();});return b;};
+  const close=()=>{if(RM){w.remove();return;}dim.animate([{opacity:.62},{opacity:0}],{duration:260,fill:'forwards'});p.animate([{opacity:1},{opacity:0,transform:'scale(.94)'}],{duration:220,fill:'forwards'}).onfinish=()=>w.remove();};
+  p.append(q,btn(26,'Not yet',close),btn(156,'Yes, done',()=>{w.remove();projectDone();}));w.append(dim,p);cur.appendChild(w);
+  if(!RM){dim.animate([{opacity:0},{opacity:.62}],{duration:320});p.animate([{opacity:0,transform:'scale(.92)'},{opacity:1,transform:'none'}],{duration:380,easing:'cubic-bezier(.2,.8,.2,1)'});}
+}
+function projectDone(){
+  pjSync();ST.credits=(ST.credits||0)+1;
+  ST.projects.splice(ST.pjIdx||0,1);ST.projects=ST.projects.filter(Boolean);
+  if(ST.projects.length){pjLoad(0);ST.pjOpen=null;_show26(projectFrame(),{t:'SMART_ANIMATE',du:.7,e:'GENTLE'});}
+  else{ST.pjIdx=0;pjClear();_show26(HOME,{t:'SMART_ANIMATE',du:.77,e:'GENTLE'});}
+  setTimeout(()=>toast('+1 credit — it’s on your profile now'),400);
+}
+
+/* ---------- someone else’s projects: their bar too ---------- */
+function pjoList(D){
+  const pool=Object.values(DEPT_PROJECTS).flat();const find=nm=>pool.find(p=>p[0]===nm);
+  if(D.real){const about=(D.about||'').trim();return [[about?pjHeuristic(about):'A new project',about||'Just joined &Lorem, the project is taking shape.']];}
+  const n=1+hashStr(D.name)%3;const first=D._pj||find(D.projects[0])||[D.projects[0],'A project with a strong concept behind it.'];
+  const out=[first];for(const nm of D.projects.slice(1)){if(out.length>=n)break;out.push(find(nm)||[nm,`${nm}: a ${D.dept.toLowerCase()} project, looking for a small crew.`]);}
+  return out;}
+otherProject=function(D){const l=pjoList(D);return l[Math.min(ST.pjoIdx||0,l.length-1)];};
+const _opf26=otherProjectFrame;otherProjectFrame=function(it){
+  const id=_opf26(it);const f=N[id],D=personData(it),P=PAL((D.color||'#3361ff').toLowerCase()),list=pjoList(D),idx=Math.min(ST.pjoIdx||0,list.length-1);
+  const t=f.k.find(c=>c.n==='My Profile pjo');if(t)bigTitle(t,`${D.first}’s Project\n`,list[idx][0],P.title);
+  const k=[];pjBar(k,list.map(p=>p[0]),idx,P,i=>act({f:'pjosw',i}));
+  const si=f.k.findIndex(c=>c.n==='Status bar');f.k.splice(si<0?f.k.length:si,0,...k);return id;};
+
+/* ---------- their crew: 2 to 6 students, one crew per project ---------- */
+const _oc26=otherCrew;otherCrew=function(it){
+  const D=personData(it),key='crew-pjo-'+hashStr(D.name+'#'+(ST.pjoIdx||0));if(ST.grids[key])return ST.grids[key];
+  const G=_oc26(it);delete ST.grids[G.name];G.name=key;
+  const n=2+hashStr(D.name+(ST.pjoIdx||0))%5;const keep=G.order.filter(x=>G.items[x]&&G.items[x].person).slice(0,n);
+  if(G.sel&&!keep.includes(G.sel))keep[0]=G.sel;
+  for(const x of Object.keys(G.items))if(!keep.includes(x))delete G.items[x];
+  G.order=keep;G.lay=layout(keep,G.sel,G.anchor);ST.grids[key]=G;return G;};
+
+/* ---------- actions ---------- */
+const _act26=APP.action;APP.action=(el,a)=>{
+  if(a.f==='pjsw'){pjSync();pjLoad(a.i);ST.pjOpen=null;_show26(projectFrame(),{t:'SMART_ANIMATE',du:.6,e:'GENTLE'});return;}
+  if(a.f==='pjosw'){ST.pjoIdx=a.i;ST.pjoOpen=null;if(ST.profIt)show(otherProjectFrame(ST.profIt),{t:'SMART_ANIMATE',du:.6,e:'GENTLE'});return;}
+  if(a.f==='pjdone'){askDone();return;}
+  if(a.f==='pjmore'){ST.pjoIdx=0;}
+  _act26(el,a);};
+
+/* ---------- What Do You Bring (and every skill chip): your colour's tones ---------- */
+const _mf26=APP.mapFill;APP.mapFill=(hex,o)=>{ if(ST.accent&&o&&o.n==='bg'&&!o.fixc){const h=(hex||'').toLowerCase(),P=P_();
+    if(h==='#f2f2f7')return P.tint; if(h==='#242424')return P.strong;}
+  return _mf26(hex,o); };
+
+/* ---------- Home: the unread dot on the line of the word "Chats" ---------- */
+const _hd26=homeDot;homeDot=function(s){_hd26(s);const d=s&&s.querySelector('.home-dot');if(!d)return;
+  const l=[...s.children].find(e=>e._n&&e._n.y==='TE'&&(e.textContent||'').trim()==='Chats');if(!l)return;
+  const sp=l.querySelector('span');const lh=sp?parseFloat(sp.style.lineHeight)||parseFloat(sp.style.fontSize)*1.2:20;
+  const y=l._box.y+lh/2-5;d._box.y=y;d.style.top=y+'px';};
+
+/* ---------- Scanning starts smoothly: the screen slides in whole (nothing flies from the middle) ---------- */
+function prepPart26(){
+  const _rs=resetState;resetState=function(){_rs();ST.projects=[];ST.pjIdx=0;ST.pjoIdx=0;}; for(const r of N[FR_DUE].r||[])for(const a of r.a)if(a.d==='709:27226')a.tr={t:'PUSH',du:1.02,e:'GENTLE',dir:'LEFT'}; }
+</script>
 <style>
 html.app-dark #phone{background:#242424}
 html.app-dark body.onphone{background:#242424}
@@ -3820,7 +3937,7 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v49';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v50';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
@@ -3838,7 +3955,7 @@ window.__lorem={show:id=>{if(cur){cur.remove();cur=null;}busy=false;clearTimers(
   try{
     const [n,s]=await Promise.all([fetch('nodes.json').then(r=>r.json()),fetch('svg.json').then(r=>r.json())]);
     N=n;SVG=s;prepShadows();for(const o of Object.values(N))indexComps(o,null);
-    prep();prepRoutes();prepOnboarding();prepProject();prepPart4();prepPart5();prepPart6();prepPart7();prepPart14();prepPart16();prepPart17();prepPart19();prepPart21();
+    prep();prepRoutes();prepOnboarding();prepProject();prepPart4();prepPart5();prepPart6();prepPart7();prepPart14();prepPart16();prepPart17();prepPart19();prepPart21();prepPart26();
     fetch('splash.mp4').then(r=>{if(!r.ok)throw 0;return r.blob();}).then(b=>{VIDEO=URL.createObjectURL(b);}).catch(()=>{VIDEO=null;});
     fetch('poster.png').then(r=>{if(!r.ok)throw 0;return r.blob();}).then(b=>{POSTER=URL.createObjectURL(b);}).catch(()=>{});
     document.getElementById('msg').remove();
