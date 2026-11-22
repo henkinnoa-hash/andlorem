@@ -3994,6 +3994,46 @@ const _ss27=startSync;startSync=function(){_ss27();if(!ST.token)return;pushSubsc
 const _show27=show;show=function(id,tr,isBack){_show27(id,tr,isBack);
   if(PUSH_OK&&ST.token&&cur&&[MENU,HOME].includes(baseOf(cur._fid)))setTimeout(askPush,1400);};
 </script>
+<script>
+/* ======================================================================
+   Part 28 — a notification check: tap 5 times fast at the very top of
+   the screen (where the clock is). It shows what the phone and the
+   server know, and sends a test notification to this phone.
+   ====================================================================== */
+let PT_TAPS=[];
+document.addEventListener('pointerup',e=>{
+  const ph=document.getElementById('phone');if(!ph)return;const r=ph.getBoundingClientRect(),s=r.width/402;
+  if(e.clientY-r.top>70*s&&e.clientY>70)return;
+  const now=Date.now();PT_TAPS=PT_TAPS.filter(t=>now-t<1500);PT_TAPS.push(now);
+  if(PT_TAPS.length>=5){PT_TAPS=[];pushCheck();}
+},true);
+async function pushCheck(){
+  if(!cur||cur.querySelector('.pt-box'))return;
+  const w=document.createElement('div');w.className='pt-box';
+  w.style.cssText=`position:absolute;left:13px;right:13px;top:120px;padding:16px;border-radius:4px;background:#f2f2f7;color:#242424;font:500 13px/18px ${HN};z-index:80;white-space:pre-wrap;word-break:break-word`;
+  const stop=e=>e.stopPropagation();w.addEventListener('pointerdown',stop);w.addEventListener('pointerup',stop);
+  const txt=document.createElement('div');const L=[];const say=l=>{L.push(l);txt.textContent=L.join('\n');};
+  const close=document.createElement('div');close.textContent='Close';close.style.cssText=`margin-top:12px;display:inline-block;padding:8px 16px;border-radius:4px;background:#c8c8c8;color:#fff;font:700 14px ${HN};cursor:pointer`;
+  close.addEventListener('pointerup',e=>{e.stopPropagation();w.remove();});
+  w.append(txt,close);cur.appendChild(w);
+  const standalone=!!(navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches));
+  say('Notification check — '+(ST.user||'not logged in'));
+  say('Opened from Home Screen: '+(standalone?'yes':'NO'));
+  say('Phone supports it: '+(PUSH_OK?'yes':'NO'));
+  if(!PUSH_OK)return;
+  say('Permission: '+Notification.permission);
+  if(Notification.permission==='default'){const b=document.createElement('div');b.textContent='Turn on notifications';b.style.cssText=close.style.cssText+';margin-left:8px;background:'+accent();
+    b.addEventListener('pointerup',e=>{e.stopPropagation();let pr;try{pr=Notification.requestPermission();}catch(x){}Promise.resolve(pr).then(async()=>{say('Permission now: '+Notification.permission);say('Signed up on server: '+(await pushSubscribe()?'yes':'NO'));});});w.appendChild(b);return;}
+  if(Notification.permission!=='granted')return;
+  const ok=await pushSubscribe();say('Signed up on server: '+(ok?'yes':'NO'));
+  const r=await _api27('pushtest',{token:ST.token});
+  if(!r||r.error){say('Server: '+(r?r.error:'no answer'));return;}
+  const fmt=x=>!x?'—':x.note?x.note:(x.res||[]).map(z=>z.error?'error '+z.error:z.to+' → '+z.status+(z.said?' '+z.said:'')).join('; ')||'—';
+  if(r.last)say('Last message ('+new Date(r.last.at).toLocaleTimeString()+', from '+r.last.from+'): '+fmt(r.last));
+  else say('Last message: nothing recorded yet');
+  say('Test now: '+fmt(r.now)+'\n(201 = sent — a notification should appear)');
+}
+</script>
 <style>
 html.app-dark #phone{background:#242424}
 html.app-dark body.onphone{background:#242424}
@@ -4001,7 +4041,7 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v53';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v54';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
