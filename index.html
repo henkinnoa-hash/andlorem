@@ -4060,40 +4060,30 @@ stopNotes=function(){if(NOTE_T){clearTimeout(NOTE_T);clearInterval(NOTE_T);NOTE_
 
 /* ---------- Chats: tap a face → it grows with the name (like Grow Your Portfolio), tap again → the chat ---------- */
 const _chf29=chatsFrame;chatsFrame=function(){
-  const id=_chf29();const f=N[id];
-  const isTileK=c=>c.y==='RE'&&/^chat-/.test(c.n)&&!/-dot$/.test(c.n)&&!/^chat-plus/.test(c.n)&&c.r&&c.r[0]&&c.r[0].a[0].f==='chat';
-  const tiles=f.k.filter(isTileK);if(!tiles.length)return id;
-  const ids=tiles.map(t=>t.r[0].a[0].id);
-  const dots=new Set(f.k.filter(c=>/-dot$/.test(c.n)).map(c=>c.n.slice(5,-4)));
-  const items={};for(const t of tiles){const cid=t.r[0].a[0].id;const av=f.k.find(c=>c.n==='chat-'+cid+'-g');const c=CHATS.find(z=>z.id===cid);
-    items[cid]={color:t.f[0].c,g:av&&av.g,name:(c&&(c.it&&c.it.person&&c.it.person.name||c.name))||cid};}
-  let order=(ST.chatOrder||[]).filter(x=>ids.includes(x));for(const x of ids)if(!order.includes(x))order.push(x);
-  const sel=ST.chatSel&&ids.includes(ST.chatSel)?ST.chatSel:null;
-  const hadHome=f.k.some(c=>c.n==='home-btn');const L=layout(hadHome?['own',...order]:order,sel,sel?ST.chatAnchor:null);ST.chatPos=L.pos;
-  const at=f.k.findIndex(c=>isTileK(c)||c.n==='home-btn');
-  f.k=f.k.filter(c=>!(isTileK(c)||/^chat-.+-(g|dot|name)$/.test(c.n)&&!/^chat-plus/.test(c.n)||c.n==='home-btn'));
-  const add=[];
-  if(L.pos.own){const p=L.pos.own;add.push({n:'home-btn',y:'GR',g:'a0o6sp30d',x:p.x,Y:p.Y,w:p.w,h:p.h,cr:4,r:HOME_TAP()});}
-  for(const cid of order){const p=L.pos[cid];if(!p)continue;const it=items[cid],big=cid===sel,r=act({f:'chatsel',id:cid});
-    add.push({n:'chat-'+cid,y:'RE',x:p.x,Y:p.Y,w:p.w,h:p.h,cr:p.cr,f:[{t:'S',c:it.color,o:1}],fixc:1,r});
-    const g=it.g||faceFor(it.name);const av={n:'chat-'+cid+'-g',y:'GR',g,fit:1,r};
-    if(big)fitAvatar(av,{x:p.x+p.w*.19,Y:p.Y+p.h*.08,w:p.w*.62,h:p.h*.62});else fitAvatar(av,{x:p.x,Y:p.Y,w:p.w,h:p.h});add.push(av);
-    if(big){const t=lbl('chat-'+cid+'-name',p.x+13,p.Y+p.h-40,p.w-26,it.name,onColor(it.color),16);Object.assign(t,{ah:'C',r});add.push(t);}
-    if(dots.has(cid))add.push({n:'chat-'+cid+'-dot',y:'RE',x:p.x+p.w-20,Y:p.Y+10,w:10,h:10,cr:5,f:[{t:'S',c:lum(it.color)>.5?mix(it.color,'#000000',.6):'#ffffff',o:1}],fixc:1});}
-  f.k.splice(Math.max(0,Math.min(at,f.k.length)),0,...add);return id;};
+  const id=_chf29();ST.chatSel=null;
+  for(const c of N[id].k){const a=c.r&&c.r[0]&&c.r[0].a&&c.r[0].a[0];if(a&&a.f==='chat'&&/^chat-/.test(c.n))c.r=act({f:'chatsel',id:a.id});}
+  return id;};
 ROUTE['C:list']=chatsFrame;
+// the tile keeps its size: the face shrinks a little and the name shows under it (like in search)
+function chatShowName(cid){
+  if(!cur)return;const kids=[...cur.children];
+  for(const e of kids)if(e.classList&&e.classList.contains('chat-name'))e.remove();
+  for(const e of kids)if(e._n&&/^chat-.+-g$/.test(e._n.n)){e.style.transition='transform .35s cubic-bezier(.2,.8,.2,1)';e.style.transform='none';}
+  if(!cid)return;
+  const t=kids.find(e=>e._n&&e._n.n==='chat-'+cid),face=kids.find(e=>e._n&&e._n.n==='chat-'+cid+'-g');if(!t)return;
+  const c=CHATS.find(z=>z.id===cid);const name=(c&&(c.it&&c.it.person&&c.it.person.name||c.name))||cid;
+  const col=getComputedStyle(t).backgroundColor||'#ffffff';const m=col.match(/\d+/g);const hex=m?'#'+m.slice(0,3).map(x=>(+x).toString(16).padStart(2,'0')).join(''):'#ffffff';
+  if(face){face.style.transformOrigin='50% 0';face.style.transform='translateY(4%) scale(.72)';}
+  const b=t._box;const d=document.createElement('div');d.className='chat-name';
+  d.style.cssText=`position:absolute;left:${b.x}px;top:${b.y}px;width:${b.w}px;height:${b.h}px;display:flex;align-items:flex-end;justify-content:center;padding:0 8px 10px;box-sizing:border-box;pointer-events:none;text-align:center;font:700 15px/17px ${HN};color:${onColor(hex)};z-index:2`;
+  d.textContent=name;(face&&face.nextSibling?cur.insertBefore(d,face.nextSibling):cur.appendChild(d));
+  if(!RM)d.animate([{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:300,easing:'ease-out'});
+}
 const _act29=APP.action;APP.action=(el,a)=>{
   if(a.f==='chatsel'){
-    if(ST.chatSel===a.id){ST.chatSel=null;ST.chatAnchor=null;_act29(el,{f:'chat',id:a.id});return;}
-    const pos=ST.chatPos||{};const p=pos[a.id];if(!p)return;
-    const vis=Object.keys(pos).filter(x=>x!=='own').sort((x,y)=>(pos[x].Y-pos[y].Y)||(pos[x].x-pos[y].x));
-    ST.chatOrder=[...vis,...(ST.chatOrder||[]).filter(x=>!vis.includes(x))];
-    ST.chatSel=a.id;ST.chatAnchor={r:p.r,c:p.c};show(chatsFrame(),GENTLE);return;}
+    if(ST.chatSel===a.id){ST.chatSel=null;_act29(el,{f:'chat',id:a.id});return;}
+    ST.chatSel=a.id;chatShowName(a.id);return;}
   _act29(el,a);};
-// coming to Chats from anywhere else starts with no face chosen
-const _show29=show;show=function(id,tr,isBack){
-  const from=cur&&baseOf(cur._fid);if(id==='C:list'&&from!=='C:chats'&&from!=='C:chat'){ST.chatSel=null;ST.chatAnchor=null;}
-  _show29(id,tr,isBack);};
 
 /* ---------- search: the first tap on a face shows the name, the second opens them ---------- */
 const _click29=APP.click;
@@ -4122,7 +4112,7 @@ html.app-dark #phone [data-nm^="andlorem-splash"] video,html.app-dark #phone [da
 </style>
 <script>
 // version stamp: shows for 3 seconds at the bottom of the screen, so we can tell which version a phone is running
-(function(){const v=document.createElement('div');v.textContent='&Lorem · v55';
+(function(){const v=document.createElement('div');v.textContent='&Lorem · v56';
   v.style.cssText='position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;font:700 11px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#aeaeb2;pointer-events:none;transition:opacity .6s';
   document.body.appendChild(v);setTimeout(()=>{v.style.opacity=0;setTimeout(()=>v.remove(),700);},3000);})();
 </script>
